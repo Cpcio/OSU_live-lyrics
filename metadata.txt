@@ -1,4 +1,4 @@
 name: Live Lyrics
 author: Cpcio
 version: 1.1
-resolution: 1920x1080
+resolution: 1060x430

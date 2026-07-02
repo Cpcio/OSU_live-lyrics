@@ -37,7 +37,7 @@
     "title": "启用听歌识曲 / Enable Audio Match",
     "description": "开启后用当前谱面音频识别网易云歌曲并优先管理歌词加载；关闭后仅使用标题搜索 / When enabled, current beatmap audio identifies the NetEase song and prioritizes lyric loading; disabled uses title search only.",
     "options": [],
-    "value": false
+    "value": true
   },
   {
     "uniqueID": "audioMatchStartSeconds",

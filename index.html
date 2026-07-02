@@ -241,6 +241,16 @@
         --scale: 0.86;
       }
     }
+
+    @media (max-height: 520px) {
+      .overlay {
+        left: 28px;
+        top: 24px;
+        bottom: auto;
+        width: min(var(--overlay-width), calc(100vw - 56px));
+        max-height: calc(100vh - 48px);
+      }
+    }
   </style>
 </head>
 <body>
@@ -279,7 +289,7 @@
       tosuWebSocket: "ws://127.0.0.1:24050/websocket/v2",
       neteaseApiBase: "http://127.0.0.1:3000",
       lyricOffsetMs: 0,
-      audioMatchEnabled: false,
+      audioMatchEnabled: true,
       audioMatchStartSeconds: -1,
       audioMatchDurationSeconds: 15,
       audioMatchMinOffsetMs: -30000,
@@ -324,6 +334,7 @@
     let lastSeenTrackKey = "";
     let pendingTrackKey = "";
     let pendingTrackPayload = null;
+    let latestTrackPayload = null;
     let pendingTrackTimer = 0;
     let pendingTrackSince = 0;
     let lyricLines = [];
@@ -346,6 +357,7 @@
     let settingsSocket = null;
     let tosuReconnectTimer = 0;
     let settingsReconnectTimer = 0;
+    let settingsPollTimer = 0;
     let tosuConnectionId = 0;
     let settingsConnectionId = 0;
     let audioMatchAbortController = null;
@@ -432,10 +444,11 @@
       return normalized;
     }
 
-    function applySettings(payload) {
+    function applySettings(payload, options = {}) {
       const settings = normalizeSettingsPayload(payload);
       const previousSongCachePath = CONFIG.songCachePath;
       const previousAliasPath = CONFIG.aliasPath;
+      const previousReloadKey = settingsReloadKey();
       const mapping = {
         neteaseApiBase: "string",
         lyricOffsetMs: "number",
@@ -467,13 +480,25 @@
         aliasPath: "string",
       };
 
+      let changed = false;
+      let recognized = false;
+
       for (const [key, type] of Object.entries(mapping)) {
         if (!(key in settings)) continue;
 
-        if (type === "number") CONFIG[key] = parseNumber(settings[key], CONFIG[key]);
-        else if (type === "boolean") CONFIG[key] = parseBool(settings[key], CONFIG[key]);
-        else CONFIG[key] = String(settings[key]);
+        recognized = true;
+        let nextValue = CONFIG[key];
+        if (type === "number") nextValue = parseNumber(settings[key], CONFIG[key]);
+        else if (type === "boolean") nextValue = parseBool(settings[key], CONFIG[key]);
+        else nextValue = String(settings[key]);
+
+        if (CONFIG[key] !== nextValue) {
+          CONFIG[key] = nextValue;
+          changed = true;
+        }
       }
+
+      if (!recognized || !changed) return false;
 
       applyVisualConfig();
       updateOffsetBadge();
@@ -484,7 +509,67 @@
         loadSongAliases();
       }
       lastRenderedLyricIndex = -2;
-      setStatus("settings: applied");
+      if (!options.silent) setStatus("settings: applied");
+      if (settingsReloadKey() !== previousReloadKey) {
+        refreshCurrentTrackAfterSettings();
+      } else {
+        renderLyrics(lastLiveTime);
+      }
+
+      return true;
+    }
+
+    function settingsReloadKey() {
+      return JSON.stringify({
+        neteaseApiBase: CONFIG.neteaseApiBase,
+        lyricOffsetMs: CONFIG.lyricOffsetMs,
+        audioMatchEnabled: CONFIG.audioMatchEnabled,
+        audioMatchStartSeconds: CONFIG.audioMatchStartSeconds,
+        audioMatchDurationSeconds: CONFIG.audioMatchDurationSeconds,
+        audioMatchMinOffsetMs: CONFIG.audioMatchMinOffsetMs,
+        audioMatchMaxOffsetMs: CONFIG.audioMatchMaxOffsetMs,
+        autoOffsetFromFirstObject: CONFIG.autoOffsetFromFirstObject,
+        autoOffsetMaxMs: CONFIG.autoOffsetMaxMs,
+        autoOffsetLeadMs: CONFIG.autoOffsetLeadMs,
+        autoSpeedFromDifficulty: CONFIG.autoSpeedFromDifficulty,
+        speedMultiplier: CONFIG.speedMultiplier,
+        searchLimit: CONFIG.searchLimit,
+        showTranslation: CONFIG.showTranslation,
+        songCachePath: CONFIG.songCachePath,
+      });
+    }
+
+    function refreshCurrentTrackAfterSettings() {
+      if (!latestTrackPayload) return;
+
+      audioMatchAbortController?.abort();
+      clearTimeout(pendingTrackTimer);
+      pendingTrackKey = "";
+      pendingTrackPayload = null;
+      pendingTrackSince = 0;
+      currentTrackKey = "";
+      loadedLyricsTrackKey = "";
+      loadingLyricsTrackKey = "";
+      lyricLoadToken += 1;
+      clearDisplayedLyrics("Searching lyrics");
+      refreshTrack(latestTrackPayload).catch((error) => {
+        setStatus(`settings refresh error: ${error.message}`);
+      });
+    }
+
+    function requestSettingsSnapshot() {
+      if (!settingsSocket || settingsSocket.readyState !== WebSocket.OPEN) return;
+
+      try {
+        settingsSocket.send(`getSettings:${getCounterPath()}`);
+      } catch {
+        // Settings polling is best-effort.
+      }
+    }
+
+    function applySettingsFromAnyPayload(payload, options = {}) {
+      if (!payload || typeof payload !== "object") return false;
+      return applySettings(payload.settings || payload.data?.settings || payload.message?.settings || payload, options);
     }
 
     function hexToRgb(hex) {
@@ -2154,6 +2239,8 @@
 
         try {
           const data = JSON.parse(event.data);
+          applySettingsFromAnyPayload(data, { silent: true });
+          latestTrackPayload = data;
           const info = trackInfoFromPayload(data);
           const beatmap = info.beatmap;
           const incomingKey = info.key;
@@ -2206,6 +2293,7 @@
 
     function connectSettings() {
       clearTimeout(settingsReconnectTimer);
+      clearInterval(settingsPollTimer);
       const connectionId = ++settingsConnectionId;
 
       try {
@@ -2223,11 +2311,9 @@
       settingsSocket.addEventListener("open", () => {
         if (connectionId !== settingsConnectionId) return;
 
-        try {
-          settingsSocket.send(`getSettings:${getCounterPath()}`);
-        } catch {
-          // Settings are optional; defaults still work.
-        }
+        clearInterval(settingsPollTimer);
+        requestSettingsSnapshot();
+        settingsPollTimer = setInterval(requestSettingsSnapshot, 2000);
       });
 
       settingsSocket.addEventListener("message", (event) => {
@@ -2252,6 +2338,7 @@
       settingsSocket.addEventListener("close", () => {
         if (connectionId !== settingsConnectionId) return;
         clearTimeout(settingsReconnectTimer);
+        clearInterval(settingsPollTimer);
         settingsReconnectTimer = setTimeout(connectSettings, CONFIG.retryDelayMs);
       });
     }
