@@ -1,4 +1,4 @@
-# OSU Live Lyrics（制作中）
+# OSU Live Lyrics
 
 这是一个完全由AI开发的，用于 [tosu](https://github.com/tosuapp/tosu) 的 osu! 游戏内实时歌词 overlay。它会读取当前谱面的标题、作者、播放时间和音频，并通过本地网易云音乐 API 获取同步 LRC 歌词并显示。
 
