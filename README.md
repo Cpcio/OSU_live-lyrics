@@ -2,7 +2,7 @@
 
 这是一个完全由AI开发的，用于 [tosu](https://github.com/tosuapp/tosu) 的 osu! 游戏内实时歌词 overlay。它会读取当前谱面的标题、作者、播放时间和音频，并通过本地网易云音乐 API 获取同步 LRC 歌词并显示。
 
-UI示例如下，对应[谱面](https://osu.ppy.sh/beatmapsets/1790742#mania)
+UI示例如下，对应的谱面为　[链接](https://osu.ppy.sh/beatmapsets/1790742#mania)
 
 <img width="772" height="345" alt="image" src="https://github.com/user-attachments/assets/95e8e638-5125-49c7-a545-d1dced9fc562" />
 
