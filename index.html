@@ -1,0 +1,2323 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>tosu Live Lyrics</title>
+  <style>
+    :root {
+      --scale: 1;
+      --panel-r: 9;
+      --panel-g: 12;
+      --panel-b: 18;
+      --panel-alpha: 0.5;
+      --panel-border: rgba(255, 255, 255, 0.12);
+      --text-main: #ffffff;
+      --text-muted: rgba(255, 255, 255, 0.68);
+      --accent: #84f4d0;
+      --overlay-width: 960px;
+      --lyrics-height: 190px;
+      --progress-color: #84f4d0;
+      --timeline-top: #84f4d0;
+      --timeline-bottom: #7ca8ff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: transparent;
+      color: var(--text-main);
+      font-family: "Segoe UI", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+      letter-spacing: 0;
+    }
+
+    .overlay {
+      position: absolute;
+      left: 48px;
+      bottom: 52px;
+      width: min(var(--overlay-width), calc(100vw - 96px));
+      max-height: calc(100vh - 104px);
+      padding: 20px 24px 22px;
+      overflow: hidden;
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      background: rgba(var(--panel-r), var(--panel-g), var(--panel-b), var(--panel-alpha));
+      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.28);
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.78);
+      contain: layout paint style;
+    }
+
+    .song {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      column-gap: 16px;
+      row-gap: 4px;
+      margin-bottom: 16px;
+      min-width: 0;
+    }
+
+    .title,
+    .artist,
+    .status {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .title,
+    .artist {
+      grid-column: 1;
+    }
+
+    .title {
+      font-size: calc(27px * var(--scale));
+      font-weight: 700;
+      line-height: 1.18;
+    }
+
+    .artist {
+      color: var(--text-muted);
+      font-size: calc(17px * var(--scale));
+      line-height: 1.2;
+    }
+
+    .offset-badge {
+      grid-column: 2;
+      grid-row: 1 / span 2;
+      align-self: start;
+      min-width: 86px;
+      padding: 5px 8px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.18);
+      color: var(--accent);
+      font-size: calc(13px * var(--scale));
+      font-weight: 800;
+      line-height: 1.15;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .lyrics-shell {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 12px;
+      gap: 8px;
+      align-items: stretch;
+    }
+
+    .timeline {
+      position: relative;
+      width: 12px;
+      min-height: var(--lyrics-height);
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .timeline::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: linear-gradient(to bottom, var(--timeline-top), var(--timeline-bottom));
+      opacity: 0.32;
+      filter: grayscale(0.85);
+    }
+
+    .timeline-fill {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: calc(var(--progress) * 100%);
+      border-radius: 999px;
+      background:
+        linear-gradient(to bottom, var(--timeline-top), var(--timeline-bottom));
+      background-size: 100% var(--lyrics-height);
+      box-shadow: 0 0 14px rgba(132, 244, 208, 0.5);
+      transition: height 110ms linear;
+    }
+
+    .lyrics {
+      display: grid;
+      grid-template-rows: 1fr auto 1fr;
+      gap: 8px;
+      height: var(--lyrics-height);
+      min-height: 132px;
+      overflow: hidden;
+      align-items: center;
+    }
+
+    .context {
+      display: grid;
+      gap: 6px;
+      min-height: 0;
+      overflow: hidden;
+      align-content: center;
+    }
+
+    .line {
+      display: -webkit-box;
+      overflow: hidden;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      white-space: normal;
+      transition: opacity 160ms ease, color 160ms ease;
+      -webkit-box-orient: vertical;
+    }
+
+    .line.context-line {
+      color: var(--text-muted);
+      font-size: calc(20px * var(--scale));
+      line-height: 1.24;
+      opacity: 0.78;
+      -webkit-line-clamp: 1;
+    }
+
+    .line.current {
+      color: var(--text-main);
+      font-size: calc(34px * var(--scale));
+      font-weight: 800;
+      line-height: 1.16;
+      -webkit-line-clamp: 2;
+    }
+
+    .meta-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: start;
+      margin-top: 7px;
+      min-width: 0;
+    }
+
+    .translation {
+      display: -webkit-box;
+      overflow: hidden;
+      color: var(--accent);
+      font-size: calc(20px * var(--scale));
+      font-weight: 600;
+      line-height: 1.25;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      white-space: normal;
+      opacity: 0.96;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+    }
+
+    .current-time {
+      color: var(--accent);
+      font-size: calc(13px * var(--scale));
+      font-weight: 800;
+      line-height: 1.25;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .status {
+      margin-top: 12px;
+      color: rgba(255, 255, 255, 0.62);
+      font-size: calc(13px * var(--scale));
+      line-height: 1.2;
+    }
+
+    @media (max-width: 960px) {
+      .overlay {
+        left: 28px;
+        bottom: 32px;
+        width: calc(100vw - 56px);
+        max-height: calc(100vh - 64px);
+      }
+
+      :root {
+        --scale: 0.86;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="overlay" aria-live="polite">
+    <section class="song">
+      <div id="title" class="title">Waiting for beatmap...</div>
+      <div id="artist" class="artist"></div>
+      <div id="offsetBadge" class="offset-badge">offset +0ms</div>
+    </section>
+
+    <section class="lyrics-shell">
+      <div class="lyrics">
+        <div id="beforeLines" class="context"></div>
+        <div>
+          <div id="currentLine" class="line current">Waiting for tosu data</div>
+          <div class="meta-row">
+            <div id="translation" class="translation"></div>
+            <div id="currentTime" class="current-time">00:00.000</div>
+          </div>
+        </div>
+        <div id="afterLines" class="context"></div>
+      </div>
+      <div class="timeline" aria-hidden="true">
+        <div id="timelineFill" class="timeline-fill"></div>
+      </div>
+    </section>
+
+    <div id="status" class="status">tosu websocket: connecting</div>
+  </main>
+
+  <script src="js/lyric-alignment.js?v=20260702-2"></script>
+  <script src="js/afp.wasm.js?v=20260702-2"></script>
+  <script src="js/afp.js?v=20260702-2"></script>
+  <script>
+    const CONFIG = {
+      tosuWebSocket: "ws://127.0.0.1:24050/websocket/v2",
+      neteaseApiBase: "http://127.0.0.1:3000",
+      lyricOffsetMs: 0,
+      audioMatchEnabled: false,
+      audioMatchStartSeconds: -1,
+      audioMatchDurationSeconds: 15,
+      audioMatchMinOffsetMs: -30000,
+      audioMatchMaxOffsetMs: 30000,
+      autoOffsetFromFirstObject: false,
+      autoOffsetMaxMs: 45000,
+      autoOffsetLeadMs: 900,
+      autoSpeedFromDifficulty: true,
+      speedMultiplier: 1,
+      retryDelayMs: 1200,
+      searchLimit: 8,
+      contextBefore: 1,
+      contextAfter: 1,
+      showTranslation: true,
+      overlayWidthPx: 960,
+      lyricsHeightPx: 190,
+      panelColor: "#090c12",
+      panelOpacity: 0.5,
+      panelColorMode: "beatmap",
+      beatmapColorBlend: 0.72,
+      autoAccentFromBeatmap: true,
+      searchEndpoints: ["/search", "/cloudsearch"],
+      fetchTimeoutMs: 4500,
+      allowPostFallback: true,
+      localOverridesPath: "lyrics-overrides.json",
+      songCachePath: "song-cache.json",
+      songCacheWriteEndpoint: "",
+      aliasPath: "",
+    };
+
+    const titleEl = document.getElementById("title");
+    const artistEl = document.getElementById("artist");
+    const offsetBadgeEl = document.getElementById("offsetBadge");
+    const timelineFillEl = document.getElementById("timelineFill");
+    const beforeLinesEl = document.getElementById("beforeLines");
+    const currentLineEl = document.getElementById("currentLine");
+    const currentTimeEl = document.getElementById("currentTime");
+    const translationEl = document.getElementById("translation");
+    const afterLinesEl = document.getElementById("afterLines");
+    const statusEl = document.getElementById("status");
+
+    let currentTrackKey = "";
+    let lastSeenTrackKey = "";
+    let pendingTrackKey = "";
+    let pendingTrackPayload = null;
+    let pendingTrackTimer = 0;
+    let pendingTrackSince = 0;
+    let lyricLines = [];
+    let translatedLines = [];
+    let loadedLyricsTrackKey = "";
+    let loadingLyricsTrackKey = "";
+    let lyricLoadToken = 0;
+    let currentBackgroundKey = "";
+    let currentDuration = 0;
+    let currentSpeedMultiplier = 1;
+    let currentTrackOffsetMs = 0;
+    let currentAutoOffsetSource = "";
+    let lastRenderedLyricIndex = -2;
+    let lastTimelineBucket = -1;
+    let lastLiveTime = 0;
+    let lastSeenLiveTime = 0;
+    let localOverrides = {};
+    let songCacheIndex = {};
+    let externalAliases = {};
+    let tosuSocket = null;
+    let settingsSocket = null;
+    let tosuReconnectTimer = 0;
+    let settingsReconnectTimer = 0;
+    let tosuConnectionId = 0;
+    let settingsConnectionId = 0;
+    let audioMatchAbortController = null;
+
+    function clearDisplayedLyrics(message = "", options = {}) {
+      lyricLines = [];
+      translatedLines = [];
+      if (!options.keepTrackState) {
+        loadedLyricsTrackKey = "";
+        loadingLyricsTrackKey = "";
+      }
+      lastRenderedLyricIndex = -2;
+      lastTimelineBucket = -1;
+      currentTrackOffsetMs = 0;
+      currentAutoOffsetSource = "";
+      updateOffsetBadge();
+      beforeLinesEl.textContent = "";
+      currentLineEl.textContent = message;
+      currentTimeEl.textContent = "";
+      translationEl.textContent = "";
+      afterLinesEl.textContent = "";
+    }
+
+    window.addEventListener("unhandledrejection", (event) => {
+      event.preventDefault();
+      setStatus(`handled async error: ${event.reason?.message || event.reason || "unknown"}`);
+    });
+
+    window.addEventListener("error", (event) => {
+      setStatus(`page error: ${event.message || "unknown"}`);
+    });
+
+    function clamp(value, min, max) {
+      return Math.min(max, Math.max(min, value));
+    }
+
+    function parseBool(value, fallback = false) {
+      if (typeof value === "boolean") return value;
+      if (typeof value === "number") return value !== 0;
+      if (typeof value === "string") {
+        const normalized = value.trim().toLowerCase();
+        if (["true", "1", "yes", "enabled", "on"].includes(normalized)) return true;
+        if (["false", "0", "no", "disabled", "off"].includes(normalized)) return false;
+      }
+      return fallback;
+    }
+
+    function parseNumber(value, fallback) {
+      const number = Number(value);
+      return Number.isFinite(number) ? number : fallback;
+    }
+
+    function normalizeSettingValue(value) {
+      if (value && typeof value === "object") {
+        if ("value" in value) return value.value;
+        if ("selected" in value) return value.selected;
+        if ("default" in value) return value.default;
+      }
+      return value;
+    }
+
+    function normalizeSettingsPayload(payload) {
+      const source = payload?.settings || payload?.data || payload || {};
+      const normalized = {};
+
+      if (Array.isArray(source)) {
+        for (const entry of source) {
+          if (!entry?.uniqueID) continue;
+          normalized[entry.uniqueID] = normalizeSettingValue(entry);
+        }
+
+        return normalized;
+      }
+
+      for (const [key, value] of Object.entries(source)) {
+        const normalizedValue = normalizeSettingValue(value);
+        normalized[key] = normalizedValue;
+
+        if (value && typeof value === "object" && value.uniqueID) {
+          normalized[value.uniqueID] = normalizedValue;
+        }
+      }
+
+      return normalized;
+    }
+
+    function applySettings(payload) {
+      const settings = normalizeSettingsPayload(payload);
+      const previousOverridesPath = CONFIG.localOverridesPath;
+      const previousSongCachePath = CONFIG.songCachePath;
+      const previousAliasPath = CONFIG.aliasPath;
+      const mapping = {
+        neteaseApiBase: "string",
+        lyricOffsetMs: "number",
+        audioMatchEnabled: "boolean",
+        audioMatchStartSeconds: "number",
+        audioMatchDurationSeconds: "number",
+        audioMatchMinOffsetMs: "number",
+        audioMatchMaxOffsetMs: "number",
+        autoOffsetFromFirstObject: "boolean",
+        autoOffsetMaxMs: "number",
+        autoOffsetLeadMs: "number",
+        autoSpeedFromDifficulty: "boolean",
+        speedMultiplier: "number",
+        searchLimit: "number",
+        contextBefore: "number",
+        contextAfter: "number",
+        showTranslation: "boolean",
+        overlayWidthPx: "number",
+        lyricsHeightPx: "number",
+        panelColor: "string",
+        panelOpacity: "number",
+        panelColorMode: "string",
+        beatmapColorBlend: "number",
+        autoAccentFromBeatmap: "boolean",
+        fetchTimeoutMs: "number",
+        allowPostFallback: "boolean",
+        localOverridesPath: "string",
+        songCachePath: "string",
+        songCacheWriteEndpoint: "string",
+        aliasPath: "string",
+      };
+
+      for (const [key, type] of Object.entries(mapping)) {
+        if (!(key in settings)) continue;
+
+        if (type === "number") CONFIG[key] = parseNumber(settings[key], CONFIG[key]);
+        else if (type === "boolean") CONFIG[key] = parseBool(settings[key], CONFIG[key]);
+        else CONFIG[key] = String(settings[key]);
+      }
+
+      applyVisualConfig();
+      updateOffsetBadge();
+      if (CONFIG.localOverridesPath !== previousOverridesPath) {
+        loadLocalOverrides();
+      }
+      if (CONFIG.songCachePath !== previousSongCachePath) {
+        loadSongCacheIndex();
+      }
+      if (CONFIG.aliasPath !== previousAliasPath) {
+        loadSongAliases();
+      }
+      lastRenderedLyricIndex = -2;
+      setStatus("settings: applied");
+    }
+
+    function hexToRgb(hex) {
+      const match = String(hex || "").trim().match(/^#?([0-9a-f]{6})$/i);
+      if (!match) return { r: 9, g: 12, b: 18 };
+
+      const value = Number.parseInt(match[1], 16);
+      return {
+        r: (value >> 16) & 255,
+        g: (value >> 8) & 255,
+        b: value & 255,
+      };
+    }
+
+    function rgbToHex(color) {
+      return `#${[color.r, color.g, color.b]
+        .map((value) => clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0"))
+        .join("")}`;
+    }
+
+    function blendColor(a, b, amount) {
+      const ratio = clamp(Number(amount), 0, 1);
+
+      return {
+        r: a.r * (1 - ratio) + b.r * ratio,
+        g: a.g * (1 - ratio) + b.g * ratio,
+        b: a.b * (1 - ratio) + b.b * ratio,
+      };
+    }
+
+    function readableAccent(color) {
+      const boosted = {
+        r: Math.min(255, color.r * 1.35 + 28),
+        g: Math.min(255, color.g * 1.35 + 28),
+        b: Math.min(255, color.b * 1.35 + 28),
+      };
+
+      return rgbToHex(blendColor(boosted, { r: 132, g: 244, b: 208 }, 0.35));
+    }
+
+    function luminance(color) {
+      return 0.2126 * color.r + 0.7152 * color.g + 0.0722 * color.b;
+    }
+
+    function saturation(color) {
+      const max = Math.max(color.r, color.g, color.b);
+      const min = Math.min(color.r, color.g, color.b);
+      return max === 0 ? 0 : (max - min) / max;
+    }
+
+    function vividScore(color) {
+      return luminance(color) * 0.72 + saturation(color) * 255 * 0.38;
+    }
+
+    function hue(color) {
+      const r = color.r / 255;
+      const g = color.g / 255;
+      const b = color.b / 255;
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      const delta = max - min;
+
+      if (!delta) return 0;
+      if (max === r) return (60 * ((g - b) / delta) + 360) % 360;
+      if (max === g) return 60 * ((b - r) / delta + 2);
+      return 60 * ((r - g) / delta + 4);
+    }
+
+    function brightenColor(color, amount = 0.34) {
+      return {
+        r: color.r + (255 - color.r) * amount,
+        g: color.g + (255 - color.g) * amount,
+        b: color.b + (255 - color.b) * amount,
+      };
+    }
+
+    function boostSaturation(color, amount = 0.22) {
+      const gray = luminance(color);
+
+      return {
+        r: clamp(gray + (color.r - gray) * (1 + amount), 0, 255),
+        g: clamp(gray + (color.g - gray) * (1 + amount), 0, 255),
+        b: clamp(gray + (color.b - gray) * (1 + amount), 0, 255),
+      };
+    }
+
+    function makeTimelineColor(color) {
+      const luma = luminance(color);
+      const brightenAmount = luma < 76 ? 0.52 : luma < 128 ? 0.38 : 0.24;
+      return boostSaturation(brightenColor(color, brightenAmount), 0.34);
+    }
+
+    function paletteBucketKey(color) {
+      const h = Math.round(hue(color) / 18);
+      const s = Math.round(saturation(color) * 5);
+      const l = Math.round(luminance(color) / 32);
+      return `${h}:${s}:${l}`;
+    }
+
+    function addPaletteSample(buckets, color) {
+      const sat = saturation(color);
+      const luma = luminance(color);
+      if (luma < 24 || luma > 244 || sat < 0.08) return;
+
+      const key = paletteBucketKey(color);
+      const bucket = buckets.get(key) || { r: 0, g: 0, b: 0, count: 0, score: 0 };
+      const weight = 1 + sat * 2.4 + Math.min(luma, 210) / 210;
+
+      bucket.r += color.r * weight;
+      bucket.g += color.g * weight;
+      bucket.b += color.b * weight;
+      bucket.count += weight;
+      bucket.score += weight;
+      buckets.set(key, bucket);
+    }
+
+    function dominantPalette(buckets, fallback) {
+      const colors = [...buckets.values()]
+        .filter((bucket) => bucket.count > 0)
+        .map((bucket) => {
+          const color = {
+            r: bucket.r / bucket.count,
+            g: bucket.g / bucket.count,
+            b: bucket.b / bucket.count,
+          };
+
+          return {
+            color,
+            score: bucket.score * (0.75 + saturation(color)) * (0.72 + Math.min(luminance(color), 210) / 255),
+          };
+        })
+        .sort((a, b) => b.score - a.score);
+
+      const primary = colors[0]?.color || fallback;
+      const secondary = colors.find((item) => colorDistance(item.color, primary) >= 58)?.color
+        || colors[1]?.color
+        || fallback;
+
+      return { primary, secondary };
+    }
+
+    function colorDistance(a, b) {
+      return Math.sqrt(
+        (a.r - b.r) ** 2 +
+        (a.g - b.g) ** 2 +
+        (a.b - b.b) ** 2,
+      );
+    }
+
+    function separateGradientEnds(top, bottom) {
+      if (colorDistance(top, bottom) >= 72) {
+        return { top, bottom };
+      }
+
+      const cool = blendColor(top, { r: 112, g: 190, b: 255 }, 0.32);
+      const warm = blendColor(bottom, { r: 255, g: 214, b: 112 }, 0.24);
+
+      return {
+        top: makeTimelineColor(cool),
+        bottom: makeTimelineColor(warm),
+      };
+    }
+
+    function applyVisualConfig() {
+      const panel = hexToRgb(CONFIG.panelColor);
+      applyPanelColor(panel);
+      document.documentElement.style.setProperty("--panel-alpha", String(clamp(Number(CONFIG.panelOpacity), 0, 1)));
+      document.documentElement.style.setProperty("--overlay-width", `${clamp(Number(CONFIG.overlayWidthPx), 360, 1800)}px`);
+      document.documentElement.style.setProperty("--lyrics-height", `${clamp(Number(CONFIG.lyricsHeightPx), 132, 620)}px`);
+    }
+
+    function applyPanelColor(panel) {
+      const root = document.documentElement.style;
+
+      root.setProperty("--panel-r", String(panel.r));
+      root.setProperty("--panel-g", String(panel.g));
+      root.setProperty("--panel-b", String(panel.b));
+    }
+
+    function applyAccentColor(color) {
+      const accent = readableAccent(color);
+      document.documentElement.style.setProperty("--accent", accent);
+      document.documentElement.style.setProperty("--progress-color", accent);
+    }
+
+    function applyTimelineGradient(top, bottom) {
+      const root = document.documentElement.style;
+      root.setProperty("--timeline-top", rgbToHex(top));
+      root.setProperty("--timeline-bottom", rgbToHex(bottom));
+    }
+
+    function setStatus(text) {
+      statusEl.textContent = text;
+    }
+
+    function formatSignedMs(value) {
+      const number = Math.round(parseNumber(value, 0));
+      const sign = number >= 0 ? "+" : "-";
+      return `${sign}${Math.abs(number)}ms`;
+    }
+
+    function updateOffsetBadge() {
+      const total = parseNumber(CONFIG.lyricOffsetMs, 0) + parseNumber(currentTrackOffsetMs, 0);
+      const autoMark = currentAutoOffsetSource ? " auto" : "";
+      offsetBadgeEl.textContent = `offset ${formatSignedMs(total)}${autoMark}`;
+    }
+
+    function safeText(value) {
+      return String(value || "").replace(/\s+/g, " ").trim();
+    }
+
+    function normalizeForSearch(value) {
+      return safeText(value)
+        .replace(/\[[^\]]*]/g, " ")
+        .replace(/\([^)]*(?:TV Size|Short Ver\.?|Game Ver\.?|Cut Ver\.?|Extended|feat\.[^)]*)\)/gi, " ")
+        .replace(/\b(TV Size|Short Ver\.?|Game Ver\.?|Cut Ver\.?|Extended|Mapped by .*)\b/gi, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function normalizeForCompare(value) {
+      return normalizeForSearch(value)
+        .toLowerCase()
+        .replace(/[^\p{L}\p{N}]+/gu, "");
+    }
+
+    function uniqueStrings(values) {
+      const seen = new Set();
+      const output = [];
+
+      for (const value of values.map(safeText).filter(Boolean)) {
+        const key = value.toLowerCase();
+        if (seen.has(key)) continue;
+
+        seen.add(key);
+        output.push(value);
+      }
+
+      return output;
+    }
+
+    function titleVariants(title) {
+      const original = safeText(title);
+      const cleaned = normalizeForSearch(original);
+      const noParens = original.replace(/\([^)]*\)/g, " ").replace(/\[[^\]]*]/g, " ").replace(/\s+/g, " ").trim();
+      const beforeDash = original.split(/\s+-\s+|\s+[~]\s+/)[0];
+
+      return uniqueStrings([original, cleaned, noParens, beforeDash]);
+    }
+
+    function isPackTitle(title) {
+      return /\b(pack|packs|collection|collections|practice|ln\s*feast|favorite\s*song\s*9?|zhong\s*wen\s*die\s*bao\s*#?\s*\d*|jack\s*house'?s|acg\s*fantasy|malody\s*4k|compilation|anthlogy|anthology)\b/i.test(safeText(title));
+    }
+
+    function stripBracketedText(value) {
+      return safeText(value)
+        .replace(/\([^)]*\)/g, " ")
+        .replace(/\[[^\]]*]/g, " ")
+        .replace(/【[^】]*】/g, " ")
+        .replace(/（[^）]*）/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function removeDifficultyDecorations(value) {
+      return safeText(value)
+        .replace(/^\s*(?:easy|normal|hard|insane|expert|extra|extreme|master|lunatic|another|hyper|append|challenge|collab|marathon|finale)\s*[:：\-]\s*/i, "")
+        .replace(/^\s*\d+\s*[:：.)-]\s*/, "")
+        .replace(/\b(?:\d+(?:\.\d+)?\s*x|x\s*\d+(?:\.\d+)?)\b/gi, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function removeMapperSuffix(value) {
+      return safeText(value)
+        .replace(/\s+(?:mapped\s+)?by\s+[^-~|/]+$/i, "")
+        .replace(/\s+[~]\s+[^-~|/]+$/i, "")
+        .replace(/\s*[-–—]\s*(?:mapped\s+)?by\s+.+$/i, "")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function looksLikeArtistTitle(value) {
+      const text = safeText(value);
+      if (!text || text.length > 220) return false;
+      return /^.{1,90}?\s*[-\u2013\u2014\uff0d]\s*.{1,130}$/.test(text);
+    }
+
+    function removeMapperPrefix(value) {
+      const text = safeText(value);
+      const parts = text.split(/\s*\/\/\s*/).map(safeText).filter(Boolean);
+      if (parts.length < 2) return text;
+
+      const left = parts[0];
+      const right = parts.slice(1).join(" // ").trim();
+      const leftLooksSong = looksLikeArtistTitle(left);
+      const rightLooksSong = looksLikeArtistTitle(right);
+
+      if (leftLooksSong && !rightLooksSong) return left;
+      if (rightLooksSong && !leftLooksSong) return right;
+      if (rightLooksSong) return right;
+
+      return right.length >= left.length ? right : left;
+    }
+
+    const builtInAliases = {
+      hakkenshawatashi: ["発見者はワタシ"],
+      tapimiruhakkenshawatashi: ["発見者はワタシ"],
+      hakkenshawatashitapimiru: ["発見者はワタシ"],
+      wodeguozhifenniyiban: ["我的果汁分你一半"],
+      wodeguozhifenniyibanflowers: ["我的果汁分你一半"],
+      flowerswodeguozhifenniyiban: ["我的果汁分你一半"],
+      guozhifenniyiban: ["我的果汁分你一半"],
+    };
+
+    function mergedAliases() {
+      return { ...builtInAliases, ...(externalAliases || {}) };
+    }
+
+    function aliasLookupKeys(title, artist) {
+      const baseValues = [
+        title,
+        `${title}${artist}`,
+        `${artist}${title}`,
+      ];
+      const keys = [];
+
+      for (const value of baseValues) {
+        const normalized = normalizeForCompare(value);
+        if (!normalized) continue;
+
+        keys.push(normalized);
+        const tokens = normalizeForSearch(value).toLowerCase().match(/[\p{L}\p{N}]+/gu) || [];
+        const withoutParticles = tokens
+          .filter((token) => !["wa", "ha", "no", "wo", "o", "ni", "de", "to", "ga", "e"].includes(token))
+          .join("");
+        if (withoutParticles) keys.push(withoutParticles);
+      }
+
+      return uniqueStrings(keys);
+    }
+
+    function aliasVariants(title, artist) {
+      const aliasesByKey = mergedAliases();
+      const keys = aliasLookupKeys(title, artist);
+      const aliases = [];
+
+      for (const key of keys) {
+        if (aliasesByKey[key]) aliases.push(...aliasesByKey[key]);
+      }
+
+      return uniqueStrings(aliases);
+    }
+
+    function parseArtistTitle(value) {
+      const text = safeText(value);
+      const match = text.match(/^(.{1,80}?)\s*[-–—]\s*(.{1,120})$/);
+      if (!match) return null;
+
+      const artist = safeText(match[1]);
+      const title = safeText(match[2]);
+      if (!artist || !title) return null;
+
+      return { title, artist };
+    }
+
+    function beatmapMetadata(payload = {}) {
+      const beatmap = payload.beatmap || payload.menu?.bm || payload.menu?.beatmap || {};
+      const metadata = beatmap.metadata || payload.menu?.bm?.metadata || {};
+
+      return {
+        ...beatmap,
+        titleUnicode: beatmap.titleUnicode || beatmap.titleOriginal || metadata.titleOriginal || metadata.titleUnicode,
+        title: beatmap.title || metadata.title || metadata.titleRoman || metadata.titleRomanized,
+        artistUnicode: beatmap.artistUnicode || beatmap.artistOriginal || metadata.artistOriginal || metadata.artistUnicode,
+        artist: beatmap.artist || metadata.artist || metadata.artistRoman || metadata.artistRomanized,
+        version: beatmap.version || beatmap.difficulty || metadata.difficulty || metadata.version,
+        checksum: beatmap.checksum || beatmap.md5 || beatmap.hash || metadata.checksum || metadata.md5,
+      };
+    }
+
+    function deriveSearchMetaFromBeatmap(beatmap) {
+      const rawTitle = safeText(beatmap.titleUnicode || beatmap.title);
+      const rawRomanTitle = safeText(beatmap.title || rawTitle);
+      const rawArtist = safeText(beatmap.artistUnicode || beatmap.artist);
+      const version = safeText(beatmap.version);
+
+      if (!isPackTitle(rawTitle) && !isPackTitle(rawRomanTitle)) {
+        return {
+          displayTitle: rawTitle,
+          displayArtist: rawArtist,
+          searchTitle: rawTitle,
+          searchArtist: rawArtist,
+          source: "beatmap",
+        };
+      }
+
+      const cleanedVersion = removeMapperSuffix(removeMapperPrefix(removeDifficultyDecorations(stripBracketedText(version))));
+      const parsed = parseArtistTitle(cleanedVersion);
+      const searchTitle = parsed?.title || cleanedVersion || rawTitle;
+      const searchArtist = parsed?.artist || "";
+
+      return {
+        displayTitle: searchTitle,
+        displayArtist: searchArtist || rawArtist,
+        searchTitle,
+        searchArtist,
+        source: "difficulty",
+      };
+    }
+
+    function trackInfoFromPayload(payload = {}) {
+      const beatmap = beatmapMetadata(payload);
+      const meta = deriveSearchMetaFromBeatmap(beatmap);
+      const searchTitle = meta.searchTitle;
+      const searchArtist = meta.searchArtist;
+
+      return {
+        beatmap,
+        meta,
+        rawTitle: meta.displayTitle,
+        rawArtist: meta.displayArtist,
+        searchTitle,
+        searchArtist,
+        key: trackIdentityKey(beatmap, searchTitle, searchArtist),
+      };
+    }
+
+    function searchQueries(title, artist) {
+      const titles = uniqueStrings([...aliasVariants(title, artist), ...titleVariants(title)]);
+      const cleanArtist = normalizeForSearch(artist);
+      const queries = [];
+
+      for (const item of titles) {
+        if (cleanArtist) queries.push(`${item} ${cleanArtist}`);
+        queries.push(item);
+      }
+
+      return uniqueStrings(queries);
+    }
+
+    function validOnlineId(value) {
+      const text = safeText(value);
+      if (!text) return "";
+
+      const number = Number(text);
+      if (Number.isFinite(number) && number > 0) return String(Math.trunc(number));
+
+      return "";
+    }
+
+    function firstValidOnlineId(...values) {
+      for (const value of values) {
+        const id = validOnlineId(value);
+        if (id) return id;
+      }
+
+      return "";
+    }
+
+    function beatmapDifficultyId(beatmap = {}) {
+      return firstValidOnlineId(
+        beatmap.id,
+        beatmap.beatmapId,
+        beatmap.beatmapID,
+        beatmap.onlineId,
+        beatmap.onlineID,
+        beatmap.beatmap_id,
+        beatmap.metadata?.beatmapId,
+        beatmap.metadata?.beatmapID
+      );
+    }
+
+    function beatmapSetId(beatmap = {}) {
+      return firstValidOnlineId(
+        beatmap.setId,
+        beatmap.setID,
+        beatmap.beatmapSetId,
+        beatmap.beatmapSetID,
+        beatmap.beatmapsetId,
+        beatmap.beatmapsetID,
+        beatmap.beatmapset_id,
+        beatmap.metadata?.beatmapSetId,
+        beatmap.metadata?.beatmapsetId
+      );
+    }
+
+    function trackKeys(title, artist, beatmap = {}) {
+      const checksum = safeText(beatmap.checksum);
+      const difficultyId = beatmapDifficultyId(beatmap);
+      const setId = beatmapSetId(beatmap);
+      return uniqueStrings([
+        difficultyId && `beatmap:${difficultyId}`,
+        setId && `set:${setId}`,
+        checksum,
+        `${normalizeForCompare(artist)}::${normalizeForCompare(title)}`,
+        normalizeForCompare(title),
+      ].filter(Boolean));
+    }
+
+    function strictTrackKeys(beatmap = {}) {
+      const checksum = safeText(beatmap.checksum);
+      const difficultyId = beatmapDifficultyId(beatmap);
+
+      return uniqueStrings([
+        difficultyId && `beatmap:${difficultyId}`,
+        checksum,
+      ].filter(Boolean));
+    }
+
+    function trackIdentityKey(beatmap = {}, title = "", artist = "") {
+      const metadata = beatmap.metadata || {};
+      const files = beatmap.files || {};
+      const pathInfo = beatmap.path || {};
+      const folders = beatmap.folders || {};
+
+      return uniqueStrings([
+        ...strictTrackKeys(beatmap),
+        beatmapSetId(beatmap) && `set:${beatmapSetId(beatmap)}`,
+        safeText(beatmap.audio || beatmap.audioFile || beatmap.audioFilename || files.audio || files.mp3),
+        safeText(beatmap.filename || beatmap.file || files.osu || pathInfo.file || pathInfo.full),
+        safeText(pathInfo.audio || pathInfo.mp3 || pathInfo.folder || folders.beatmap),
+        normalizeForCompare(artist),
+        normalizeForCompare(title),
+        safeText(beatmap.version || metadata.version || metadata.difficulty),
+      ].filter(Boolean)).join("::");
+    }
+
+    function getOverride(title, artist, beatmap) {
+      const keys = trackKeys(title, artist, beatmap);
+      const tracks = localOverrides.tracks || {};
+
+      for (const key of keys) {
+        if (key && tracks[key]) return tracks[key];
+      }
+
+      return null;
+    }
+
+    function getSongCacheEntry(title, artist, beatmap) {
+      const keys = trackKeys(title, artist, beatmap);
+      const tracks = songCacheIndex.tracks || {};
+
+      for (const key of keys) {
+        if (!key || !tracks[key]) continue;
+        const entry = tracks[key];
+        if (key.startsWith("set:") && !entry.manual) continue;
+        if (!key.startsWith("beatmap:") && key !== safeText(beatmap.checksum) && !entry.manual) continue;
+        return entry;
+      }
+
+      return null;
+    }
+
+    function isAutoOffsetEntry(entry) {
+      return Boolean(entry?.autoOffsetSource || entry?.audioMatchSource || parseNumber(entry?.autoOffsetMs, 0) !== 0);
+    }
+
+    function audioMatchOffsetInRange(offset) {
+      const value = parseNumber(offset, 0);
+      return value >= CONFIG.audioMatchMinOffsetMs && value <= CONFIG.audioMatchMaxOffsetMs;
+    }
+
+    function cacheLyricOffset(entry) {
+      if (!entry) return 0;
+      const offset = parseNumber(entry.lyricOffsetMs, 0);
+      if (entry.audioMatchSource) return CONFIG.audioMatchEnabled && audioMatchOffsetInRange(offset) ? offset : 0;
+      if (!isAutoOffsetEntry(entry)) return offset;
+      return CONFIG.autoOffsetFromFirstObject ? offset : 0;
+    }
+
+    async function writeSongCacheIndex(title, artist, beatmap, result) {
+      if (!CONFIG.songCacheWriteEndpoint || !result?.neteaseSongId || !result?.lines?.length) return;
+
+      const keys = strictTrackKeys(beatmap);
+      if (!keys.length) return;
+
+      const payload = {
+        keys,
+        primaryKey: keys[0] || "",
+        neteaseSongId: result.neteaseSongId,
+        title,
+        artist,
+        beatmapId: beatmapDifficultyId(beatmap),
+        beatmapSetId: beatmapSetId(beatmap),
+        checksum: beatmap.checksum || "",
+        lyricOffsetMs: parseNumber(result.lyricOffsetMs, 0),
+        speedMultiplier: parseNumber(result.speedMultiplier, 1),
+        autoOffsetMs: parseNumber(result.autoOffsetMs, 0),
+        autoOffsetSource: result.autoOffsetSource || "",
+        audioMatchSource: result.audioMatchSource || "",
+        audioMatchStartTimeMs: parseNumber(result.audioMatchStartTimeMs, 0),
+        audioMatchSampleStartMs: parseNumber(result.audioMatchSampleStartMs, 0),
+        audioMatchEffectiveSampleStartMs: parseNumber(result.audioMatchEffectiveSampleStartMs, 0),
+        audioMatchSpeed: parseNumber(result.audioMatchSpeed, 1),
+        firstLyricTimeMs: parseNumber(result.firstLyricTimeMs, 0),
+        firstObjectTimeMs: parseNumber(result.firstObjectTimeMs, 0),
+        source: result.source || "",
+      };
+
+      try {
+        await requestJson(CONFIG.songCacheWriteEndpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json;charset=UTF-8" },
+          body: JSON.stringify(payload),
+        });
+        if (payload.primaryKey) {
+          songCacheIndex.tracks ||= {};
+          songCacheIndex.tracks[payload.primaryKey] = payload;
+        }
+      } catch {
+        // Static counters can run without a cache writer.
+      }
+    }
+
+    async function loadLocalOverrides() {
+      try {
+        const response = await fetch(CONFIG.localOverridesPath, { cache: "no-store" });
+        if (!response.ok) {
+          localOverrides = {};
+          return;
+        }
+        localOverrides = await response.json();
+      } catch {
+        localOverrides = {};
+      }
+    }
+
+    async function loadSongCacheIndex() {
+      try {
+        const response = await fetch(CONFIG.songCachePath, { cache: "no-store" });
+        if (!response.ok) {
+          songCacheIndex = {};
+          return;
+        }
+        const cache = await response.json();
+        songCacheIndex = cache && typeof cache === "object" ? cache : {};
+      } catch {
+        songCacheIndex = {};
+      }
+    }
+
+    async function loadSongAliases() {
+      if (!CONFIG.aliasPath) {
+        externalAliases = {};
+        return;
+      }
+
+      try {
+        const response = await fetch(CONFIG.aliasPath, { cache: "no-store" });
+        if (!response.ok) {
+          externalAliases = {};
+          return;
+        }
+        const aliases = await response.json();
+        externalAliases = aliases && typeof aliases === "object" ? aliases : {};
+      } catch {
+        externalAliases = {};
+      }
+    }
+
+    async function loadSettingsFile() {
+      try {
+        const response = await fetch("./settings.json", { cache: "no-store" });
+        if (!response.ok) return;
+        applySettings(await response.json());
+      } catch {
+        // The command channel can still provide settings later.
+      }
+    }
+
+    function getCounterPath() {
+      return encodeURI(window.COUNTER_PATH || location.pathname);
+    }
+
+    function backgroundCandidates(beatmap, payload = {}) {
+      const directPath = payload.directPath || {};
+      const files = payload.files || {};
+      const folders = payload.folders || {};
+      const stableEndpoint = "/files/beatmap/background";
+      const raw = [
+        stableEndpoint,
+        directPath.beatmapBackground,
+        directPath.beatmapFolder && files.background ? `${directPath.beatmapFolder}/${files.background}` : "",
+        folders.beatmap && files.background ? `${folders.beatmap}/${files.background}` : "",
+        files.background,
+        beatmap.background,
+        beatmap.backgroundImage,
+        beatmap.bg,
+        beatmap.path?.background,
+        beatmap.path?.bg,
+        beatmap.path?.full,
+        beatmap.path?.folder,
+        beatmap.folder,
+        beatmap.folders?.beatmap,
+        beatmap.folders?.songs,
+        beatmap.files?.background,
+        beatmap.assets?.background,
+      ].filter(Boolean).map(String);
+
+      const candidates = [];
+
+      for (const item of raw) {
+        const isStableEndpoint = item === stableEndpoint || item.startsWith("/files/beatmap/");
+        const isImagePath = /\.(jpg|jpeg|png|webp|gif)$/i.test(item);
+        const isRootTemporaryPath = item.startsWith("/") && !isStableEndpoint;
+        if (isRootTemporaryPath) continue;
+        if (!isStableEndpoint && !isImagePath) continue;
+
+        candidates.push(item);
+        if (!isImagePath) continue;
+        candidates.push(`/Songs/${item}`);
+        candidates.push(`/files/beatmap/${item}`);
+        candidates.push(`/files/beatmap/background/${item}`);
+      }
+
+      const filename = files.background || beatmap.files?.background || beatmap.background || beatmap.bg;
+      const folderCandidates = [folders.beatmap, beatmap.path?.folder, beatmap.folder, beatmap.folders?.beatmap].filter(Boolean).map(String);
+
+      for (const folder of folderCandidates) {
+        if (folder.startsWith("/") && !folder.startsWith("/files/beatmap/")) continue;
+        if (filename) {
+          candidates.push(`${folder}/${filename}`);
+          candidates.push(`/Songs/${folder}/${filename}`);
+          candidates.push(`/files/beatmap/${folder}/${filename}`);
+        }
+      }
+
+      return uniqueStrings(candidates);
+    }
+
+    function toImageUrl(path) {
+      if (/^(https?:|data:|blob:)/i.test(path)) return path;
+      if (path.startsWith("/")) return path;
+
+      const normalizedPath = path.replaceAll("\\", "/");
+      const songsIndex = normalizedPath.toLowerCase().lastIndexOf("/songs/");
+      if (songsIndex >= 0) {
+        return `/files/beatmap/${normalizedPath.slice(songsIndex + "/songs/".length)}`;
+      }
+
+      if (!/\.(jpg|jpeg|png|webp|gif)$/i.test(normalizedPath)) {
+        return `/files/beatmap/${normalizedPath}`;
+      }
+
+      try {
+        return new URL(normalizedPath, location.origin).toString();
+      } catch {
+        return path;
+      }
+    }
+
+    function toBeatmapFileUrl(path) {
+      if (!path) return "";
+      if (/^(https?:|data:|blob:)/i.test(path)) return path;
+
+      const normalizedPath = String(path).replaceAll("\\", "/");
+      if (normalizedPath.startsWith("/")) {
+        if (normalizedPath.startsWith("/files/beatmap/") || /\.osu(?:[?#].*)?$/i.test(normalizedPath)) return normalizedPath;
+        return "";
+      }
+
+      const songsIndex = normalizedPath.toLowerCase().lastIndexOf("/songs/");
+      if (songsIndex >= 0) {
+        return `/files/beatmap/${normalizedPath.slice(songsIndex + "/songs/".length)}`;
+      }
+
+      if (/\.osu$/i.test(normalizedPath)) {
+        return `/files/beatmap/${normalizedPath}`;
+      }
+
+      return "";
+    }
+
+    function beatmapFileCandidates(beatmap = {}, payload = {}) {
+      const directPath = payload.directPath || {};
+      const files = payload.files || beatmap.files || {};
+      const pathInfo = beatmap.path || {};
+
+      return uniqueStrings([
+        "/files/beatmap/file",
+        directPath.beatmapFile,
+        directPath.beatmap,
+        files.beatmap,
+        files.osu,
+        files.file,
+        beatmap.file,
+        beatmap.filename,
+        pathInfo.file,
+        pathInfo.full,
+      ].filter(Boolean).map(toBeatmapFileUrl).filter(Boolean));
+    }
+
+    async function fetchText(path) {
+      const timeout = timeoutSignal(CONFIG.fetchTimeoutMs);
+
+      try {
+        const response = await fetch(path, {
+          cache: "no-store",
+          mode: "cors",
+          signal: timeout.signal,
+        });
+
+        if (!response.ok) throw new Error(`${path} returned ${response.status}`);
+        return response.text();
+      } finally {
+        timeout.done?.();
+      }
+    }
+
+    async function fetchArrayBuffer(path, signal = null) {
+      const timeout = timeoutSignal(Math.max(CONFIG.fetchTimeoutMs, 15000));
+      let abortHandler = null;
+
+      try {
+        if (signal?.aborted) throw new Error("request aborted");
+        if (signal) {
+          abortHandler = () => timeout.abort?.();
+          signal.addEventListener("abort", abortHandler, { once: true });
+        }
+
+        const response = await fetch(path, {
+          cache: "no-store",
+          mode: "cors",
+          signal: timeout.signal,
+        });
+
+        if (!response.ok) throw new Error(`${path} returned ${response.status}`);
+        return response.arrayBuffer();
+      } catch (error) {
+        if (signal?.aborted) throw new Error("audio match aborted");
+        throw error;
+      } finally {
+        if (signal && abortHandler) signal.removeEventListener("abort", abortHandler);
+        timeout.done?.();
+      }
+    }
+
+    function toTosuHttpBase() {
+      try {
+        const url = new URL(CONFIG.tosuWebSocket);
+        url.protocol = url.protocol === "wss:" ? "https:" : "http:";
+        url.pathname = "/";
+        url.search = "";
+        url.hash = "";
+        return url.toString();
+      } catch {
+        return "http://127.0.0.1:24050/";
+      }
+    }
+
+    function toTosuUrl(path) {
+      return new URL(path, toTosuHttpBase()).toString();
+    }
+
+    async function currentBeatmapAudioBuffer(signal = null) {
+      return fetchArrayBuffer(toTosuUrl("/files/beatmap/audio"), signal);
+    }
+
+    function throwIfAudioMatchAborted(signal) {
+      if (signal?.aborted) throw new Error("audio match aborted");
+    }
+
+    async function decodeAudioBuffer(buffer) {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) throw new Error("AudioContext unavailable");
+
+      const context = new AudioContextClass({ sampleRate: 8000 });
+      try {
+        return await context.decodeAudioData(buffer.slice(0));
+      } finally {
+        context.close?.();
+      }
+    }
+
+    function audioMatchSamples(audioBuffer, startSeconds, durationSeconds) {
+      const sampleRate = audioBuffer.sampleRate || 8000;
+      const channel = audioBuffer.getChannelData(0);
+      const start = Math.max(0, Math.floor(startSeconds * sampleRate));
+      const count = Math.max(sampleRate, Math.floor(durationSeconds * sampleRate));
+      const end = Math.min(channel.length, start + count);
+      if (end <= start) throw new Error("audio match sample range is outside current audio");
+      return new Float32Array(channel.subarray(start, end));
+    }
+
+    function audioMatchWindow(audioBuffer, configuredStartSeconds, configuredDurationSeconds, speed) {
+      const totalSeconds = audioBuffer.duration || audioBuffer.length / (audioBuffer.sampleRate || 8000);
+      const safeSpeed = Number.isFinite(Number(speed)) && Number(speed) > 0 ? Number(speed) : 1;
+      const targetTotalSeconds = totalSeconds * safeSpeed;
+      const useMiddleWindow = Number(configuredStartSeconds) < 0;
+      const targetDurationSeconds = useMiddleWindow ? 15 : configuredDurationSeconds;
+      const safeTargetDurationSeconds = clamp(targetDurationSeconds, 3, 30);
+      const targetStartSeconds = useMiddleWindow
+        ? Math.max(0, targetTotalSeconds / 2 - safeTargetDurationSeconds / 2)
+        : Math.max(0, configuredStartSeconds);
+      const actualDurationSeconds = Math.min(totalSeconds, Math.max(1, safeTargetDurationSeconds / safeSpeed));
+      let actualStartSeconds = Math.max(0, targetStartSeconds / safeSpeed);
+
+      if (actualStartSeconds + actualDurationSeconds > totalSeconds) {
+        actualStartSeconds = Math.max(0, totalSeconds - actualDurationSeconds);
+      }
+
+      return {
+        actualStartSeconds,
+        actualDurationSeconds,
+        targetStartSeconds: actualStartSeconds * safeSpeed,
+        targetDurationSeconds: actualDurationSeconds * safeSpeed,
+        useMiddleWindow,
+        totalSeconds,
+      };
+    }
+
+    function stretchSamplesForSpeed(samples, speed) {
+      const safeSpeed = Number.isFinite(Number(speed)) && Number(speed) > 0 ? Number(speed) : 1;
+      if (Math.abs(safeSpeed - 1) < 0.01) return samples;
+
+      const length = Math.max(1, Math.round(samples.length * safeSpeed));
+      const output = new Float32Array(length);
+
+      for (let index = 0; index < length; index += 1) {
+        const sourceIndex = index / safeSpeed;
+        const left = Math.floor(sourceIndex);
+        const right = Math.min(samples.length - 1, left + 1);
+        const ratio = sourceIndex - left;
+        output[index] = samples[left] * (1 - ratio) + samples[right] * ratio;
+      }
+
+      return output;
+    }
+
+    function audioMatchSpeed(beatmap = {}) {
+      const difficultySpeed = CONFIG.autoSpeedFromDifficulty ? parseSpeedMultiplier(beatmap.version) : 1;
+      const manualSpeed = clamp(parseNumber(CONFIG.speedMultiplier, 1), 0.5, 2.5);
+      return clamp(difficultySpeed * manualSpeed, 0.5, 2.5);
+    }
+
+    function bestAudioMatchResult(response) {
+      const result = response?.data?.result || [];
+      if (!result.length) return null;
+      return result[0];
+    }
+
+    async function audioMatchCurrentBeatmap(beatmap = {}) {
+      if (!CONFIG.audioMatchEnabled) return null;
+      if (typeof GenerateFP !== "function") throw new Error("audio fingerprint runtime unavailable");
+
+      const requestedStartSeconds = parseNumber(CONFIG.audioMatchStartSeconds, -1);
+      const requestedDurationSeconds = clamp(parseNumber(CONFIG.audioMatchDurationSeconds, 15), 3, 30);
+      const speed = audioMatchSpeed(beatmap);
+
+      audioMatchAbortController?.abort();
+      audioMatchAbortController = new AbortController();
+      const signal = audioMatchAbortController.signal;
+
+      let buffer = await currentBeatmapAudioBuffer(signal);
+      throwIfAudioMatchAborted(signal);
+      let audioBuffer = await decodeAudioBuffer(buffer);
+      buffer = null;
+      throwIfAudioMatchAborted(signal);
+      const windowInfo = audioMatchWindow(audioBuffer, requestedStartSeconds, requestedDurationSeconds, speed);
+      setStatus(`audio match: sampling ${windowInfo.actualStartSeconds.toFixed(2)}s + ${windowInfo.actualDurationSeconds.toFixed(2)}s @ ${speed.toFixed(2)}x`);
+
+      let samples = audioMatchSamples(audioBuffer, windowInfo.actualStartSeconds, windowInfo.actualDurationSeconds);
+      audioBuffer = null;
+      let matchedSamples = stretchSamplesForSpeed(samples, speed);
+      samples = null;
+      const matchDurationSeconds = clamp(matchedSamples.length / 8000, 3, 30);
+      throwIfAudioMatchAborted(signal);
+      const audioFP = await GenerateFP(matchedSamples);
+      matchedSamples = null;
+      throwIfAudioMatchAborted(signal);
+      const data = await fetchJson("/audio/match", {
+        duration: String(matchDurationSeconds),
+        audioFP,
+      });
+      throwIfAudioMatchAborted(signal);
+      const match = bestAudioMatchResult(data);
+      if (!match?.song?.id) {
+        throw new Error(`audio match no result${data?.data?.noMatchReason !== undefined ? ` (${data.data.noMatchReason})` : ""}`);
+      }
+
+      const targetSampleStartMs = Math.round(windowInfo.targetStartSeconds * 1000);
+      const matchStartMs = parseNumber(match.startTime, targetSampleStartMs);
+      const effectiveSampleStartMs = targetSampleStartMs;
+      const offsetMs = Math.round(matchStartMs - effectiveSampleStartMs);
+      if (!audioMatchOffsetInRange(offsetMs)) {
+        throw new Error(`audio match offset out of range ${offsetMs}ms`);
+      }
+
+      return {
+        song: match.song,
+        startTimeMs: matchStartMs,
+        sampleStartMs: Math.round(windowInfo.actualStartSeconds * 1000),
+        effectiveSampleStartMs,
+        offsetMs,
+        speed,
+        raw: match,
+      };
+    }
+
+    async function firstObjectTimeForAlignment(beatmap = {}, payload = {}) {
+      const fromTosu = window.LyricAlignment?.firstObjectTimeFromBeatmap?.(beatmap, payload);
+      if (fromTosu !== null && fromTosu !== undefined) return fromTosu;
+
+      for (const candidate of beatmapFileCandidates(beatmap, payload)) {
+        try {
+          const osuText = await fetchText(candidate);
+          const fromFile = window.LyricAlignment?.firstObjectTimeFromOsu?.(osuText);
+          if (fromFile !== null && fromFile !== undefined) return fromFile;
+        } catch {
+          // Try another possible beatmap file endpoint/path.
+        }
+      }
+
+      return null;
+    }
+
+    async function extractBackgroundPalette(src) {
+      const image = await new Promise((resolve, reject) => {
+        const img = new Image();
+        const timer = setTimeout(() => reject(new Error("background image timeout")), 2500);
+
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+          clearTimeout(timer);
+          resolve(img);
+        };
+        img.onerror = () => {
+          clearTimeout(timer);
+          reject(new Error("background image failed"));
+        };
+        img.src = src;
+      });
+
+      const canvas = document.createElement("canvas");
+      const size = 32;
+      canvas.width = size;
+      canvas.height = size;
+
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      ctx.drawImage(image, 0, 0, size, size);
+
+      const data = ctx.getImageData(0, 0, size, size).data;
+      let r = 0;
+      let g = 0;
+      let b = 0;
+      let count = 0;
+      const buckets = new Map();
+
+      for (let i = 0; i < data.length; i += 4) {
+        const alpha = data[i + 3];
+        if (alpha < 16) continue;
+
+        r += data[i];
+        g += data[i + 1];
+        b += data[i + 2];
+        count += 1;
+
+        const color = { r: data[i], g: data[i + 1], b: data[i + 2] };
+        addPaletteSample(buckets, color);
+      }
+
+      if (!count) throw new Error("background image has no color");
+
+      const average = {
+        r: r / count,
+        g: g / count,
+        b: b / count,
+      };
+      const palette = dominantPalette(buckets, average);
+
+      return {
+        average,
+        primary: palette.primary,
+        secondary: palette.secondary,
+      };
+    }
+
+    async function updateBeatmapColor(beatmap, payload = {}) {
+      const fallback = hexToRgb(CONFIG.panelColor);
+
+      if (CONFIG.panelColorMode !== "beatmap") {
+        applyPanelColor(fallback);
+        applyAccentColor(fallback);
+        applyTimelineGradient(fallback, fallback);
+        return;
+      }
+
+      const candidates = backgroundCandidates(beatmap, payload);
+      const key = `${beatmap.checksum || ""}::${candidates.join("|")}`;
+      if (!candidates.length || key === currentBackgroundKey) return;
+
+      currentBackgroundKey = key;
+      const limitedCandidates = candidates.slice(0, 6);
+
+      for (const candidate of limitedCandidates) {
+        try {
+          const sampled = await extractBackgroundPalette(toImageUrl(candidate));
+          const panel = blendColor(sampled.average, fallback, CONFIG.beatmapColorBlend);
+          const gradient = separateGradientEnds(
+            makeTimelineColor(sampled.primary),
+            makeTimelineColor(sampled.secondary),
+          );
+          applyPanelColor(panel);
+          applyTimelineGradient(gradient.top, gradient.bottom);
+
+          if (CONFIG.autoAccentFromBeatmap) {
+            applyAccentColor(sampled.average);
+          }
+
+          setStatus("background: sampled");
+          return;
+        } catch {
+          // Try the next possible background field.
+        }
+      }
+
+      applyPanelColor(fallback);
+      applyAccentColor(fallback);
+      applyTimelineGradient(fallback, fallback);
+      setStatus("background: fallback");
+    }
+
+    function parseLrc(lrc) {
+      const lines = [];
+
+      for (const rawLine of String(lrc || "").split(/\r?\n/)) {
+        const tags = [...rawLine.matchAll(/\[(\d{1,2}):(\d{1,2})(?:[.:](\d{1,3}))?]/g)];
+        if (!tags.length) continue;
+
+        const text = rawLine.replace(/(?:\[\d{1,2}:\d{1,2}(?:[.:]\d{1,3})?])+/g, "").trim();
+        if (!text) continue;
+
+        for (const tag of tags) {
+          const minutes = Number(tag[1]);
+          const seconds = Number(tag[2]);
+          const fraction = tag[3] || "0";
+          const millis = Number(fraction.padEnd(3, "0").slice(0, 3));
+
+          lines.push({
+            time: minutes * 60000 + seconds * 1000 + millis,
+            text,
+          });
+        }
+      }
+
+      return lines.sort((a, b) => a.time - b.time);
+    }
+
+    function findLineIndex(lines, time) {
+      if (!lines.length) return -1;
+
+      let low = 0;
+      let high = lines.length - 1;
+      let answer = -1;
+
+      while (low <= high) {
+        const middle = Math.floor((low + high) / 2);
+
+        if (lines[middle].time <= time) {
+          answer = middle;
+          low = middle + 1;
+        } else {
+          high = middle - 1;
+        }
+      }
+
+      return answer;
+    }
+
+    function pickTranslation(time) {
+      if (!CONFIG.showTranslation || !translatedLines.length) return "";
+
+      const index = findLineIndex(translatedLines, time);
+      if (index < 0) return "";
+      return translatedLines[index].text;
+    }
+
+    function formatTime(ms) {
+      const safe = Math.max(0, Number(ms) || 0);
+      const minutes = Math.floor(safe / 60000);
+      const seconds = Math.floor((safe % 60000) / 1000);
+      const millis = Math.floor(safe % 1000);
+
+      return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}.${String(millis).padStart(3, "0")}`;
+    }
+
+    function parseSpeedMultiplier(version) {
+      const text = safeText(version);
+      const matches = [
+        ...text.matchAll(/(?:^|[^\d])(\d+(?:\.\d+)?)\s*x(?:$|[^\d])/gi),
+        ...text.matchAll(/(?:^|[^\d])x\s*(\d+(?:\.\d+)?)(?:$|[^\d])/gi),
+      ];
+
+      for (const match of matches) {
+        const value = Number(match[1]);
+        if (value >= 0.5 && value <= 2.5) return value;
+      }
+
+      return 1;
+    }
+
+    function effectiveLyricTime(liveTime) {
+      const manualSpeed = clamp(parseNumber(CONFIG.speedMultiplier, 1), 0.5, 2.5);
+      const speed = CONFIG.autoSpeedFromDifficulty ? currentSpeedMultiplier * manualSpeed : manualSpeed;
+      return Math.max(0, liveTime * speed + CONFIG.lyricOffsetMs + currentTrackOffsetMs);
+    }
+
+    function beatmapDuration(beatmap = {}, payload = {}) {
+      const time = beatmap.time || payload.beatmap?.time || payload.menu?.bm?.time || {};
+      const candidates = [
+        time.full,
+        time.mp3,
+        time.lastObject,
+        time.end,
+        time.duration,
+        beatmap.duration,
+        beatmap.totalLength,
+        beatmap.hitLength,
+        beatmap.metadata?.duration,
+      ];
+
+      for (const value of candidates) {
+        const duration = Number(value);
+        if (Number.isFinite(duration) && duration > 0) return duration;
+      }
+
+      return 0;
+    }
+
+    function hasManualTrackOffset(result, override, cachedSong) {
+      if (parseNumber(override?.lyricOffsetMs, 0) !== 0) return true;
+      if (parseNumber(cachedSong?.lyricOffsetMs, 0) !== 0 && !isAutoOffsetEntry(cachedSong)) return true;
+      if (override?.manual || cachedSong?.manual) return true;
+      return parseNumber(result?.lyricOffsetMs, 0) !== 0;
+    }
+
+    async function applyAutoOffset(result, beatmap = {}, payload = {}, override = null, cachedSong = null) {
+      if (!CONFIG.autoOffsetFromFirstObject || !result?.lines?.length) return result;
+      if (hasManualTrackOffset(result, override, cachedSong)) return result;
+      if (!window.LyricAlignment?.estimateOffset) return result;
+
+      const firstObjectTime = await firstObjectTimeForAlignment(beatmap, payload);
+      const speed = parseNumber(result.speedMultiplier, 1) * parseSpeedMultiplier(beatmap.version);
+      const estimate = window.LyricAlignment.estimateOffset({
+        lyricLines: result.lines,
+        firstObjectTime,
+        speed,
+        maxOffsetMs: CONFIG.autoOffsetMaxMs,
+        leadMs: CONFIG.autoOffsetLeadMs,
+      });
+
+      if (!estimate) return result;
+
+      return {
+        ...result,
+        lyricOffsetMs: estimate.offset,
+        autoOffsetMs: estimate.offset,
+        autoOffsetSource: "first lyric to first object",
+        firstLyricTimeMs: estimate.lyricTime,
+        firstObjectTimeMs: estimate.firstObjectTime,
+      };
+    }
+
+    function updateTimelineDuration(beatmap = {}, payload = {}, resetWhenMissing = false) {
+      const duration = beatmapDuration(beatmap, payload);
+      if (duration && duration !== currentDuration) {
+        currentDuration = duration;
+        lastTimelineBucket = -1;
+      } else if (!duration && resetWhenMissing && currentDuration) {
+        currentDuration = 0;
+        lastTimelineBucket = -1;
+      }
+    }
+
+    function renderTimeline(liveTime) {
+      const duration = Number(currentDuration) || 0;
+      if (!duration) {
+        if (lastTimelineBucket !== 0) {
+          lastTimelineBucket = 0;
+          document.documentElement.style.setProperty("--progress", "0");
+          timelineFillEl.style.height = "0%";
+        }
+        return;
+      }
+
+      const progress = clamp((Number(liveTime) || 0) / duration, 0, 1);
+      const bucket = Math.round(progress * 1000);
+      if (bucket === lastTimelineBucket) return;
+
+      lastTimelineBucket = bucket;
+      document.documentElement.style.setProperty("--progress", String(progress));
+      timelineFillEl.style.height = `${progress * 100}%`;
+    }
+
+    function renderContext(container, lines) {
+      container.textContent = "";
+
+      for (const text of lines) {
+        const line = document.createElement("div");
+        line.className = "line context-line";
+        line.textContent = text;
+        container.appendChild(line);
+      }
+    }
+
+    function renderLyrics(time) {
+      if (loadedLyricsTrackKey !== currentTrackKey) return;
+      if (!lyricLines.length) return;
+
+      const adjustedTime = effectiveLyricTime(time);
+      const index = findLineIndex(lyricLines, adjustedTime);
+      const currentIndex = Math.max(0, index);
+      if (currentIndex === lastRenderedLyricIndex) {
+        currentTimeEl.textContent = formatTime(lyricLines[currentIndex]?.time || adjustedTime);
+        return;
+      }
+
+      lastRenderedLyricIndex = currentIndex;
+      const beforeCount = clamp(Number(CONFIG.contextBefore), 0, 8);
+      const afterCount = clamp(Number(CONFIG.contextAfter), 0, 8);
+      const beforeStart = Math.max(0, currentIndex - beforeCount);
+      const before = lyricLines.slice(beforeStart, currentIndex).map((line) => line.text);
+      const after = lyricLines.slice(currentIndex + 1, currentIndex + 1 + afterCount).map((line) => line.text);
+
+      renderContext(beforeLinesEl, before);
+      currentLineEl.textContent = lyricLines[currentIndex]?.text || "";
+      currentTimeEl.textContent = formatTime(lyricLines[currentIndex]?.time || adjustedTime);
+      translationEl.textContent = pickTranslation(adjustedTime);
+      renderContext(afterLinesEl, after);
+    }
+
+    function scoreSong(song, title, artist) {
+      const targetTitle = normalizeForCompare(title);
+      const targetArtist = normalizeForCompare(artist);
+      const targetVariants = titleVariants(title).map(normalizeForCompare).filter(Boolean);
+      const songTitle = normalizeForCompare(song.name);
+      const songAlbum = normalizeForCompare(song.album?.name || song.al?.name || "");
+      const songArtists = normalizeForCompare((song.artists || song.ar || []).map((item) => item.name).join(" "));
+
+      let score = 0;
+
+      if (songTitle === targetTitle) score += 80;
+      else if (songTitle.includes(targetTitle) || targetTitle.includes(songTitle)) score += 45;
+
+      for (const variant of targetVariants) {
+        if (songTitle === variant) score += 72;
+        else if (songTitle.includes(variant)) score += 52;
+        else if (variant.includes(songTitle)) score += 32;
+        if (songAlbum.includes(variant)) score += 14;
+      }
+
+      if (songArtists === targetArtist) score += 50;
+      else if (songArtists.includes(targetArtist) || targetArtist.includes(songArtists)) score += 28;
+      else if (!targetArtist) score += 8;
+
+      return score;
+    }
+
+    function timeoutSignal(timeoutMs) {
+      if (!window.AbortController) return {};
+
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+      return {
+        signal: controller.signal,
+        abort: () => controller.abort(),
+        done: () => clearTimeout(timer),
+      };
+    }
+
+    async function fetchJson(path, params) {
+      const queryUrl = new URL(path, CONFIG.neteaseApiBase);
+
+      for (const [key, value] of Object.entries(params || {})) {
+        queryUrl.searchParams.set(key, value);
+      }
+
+      queryUrl.searchParams.set("timestamp", Date.now());
+
+      try {
+        return await requestJson(queryUrl.toString(), { method: "GET" });
+      } catch (error) {
+        const message = String(error.message || "");
+        if (!CONFIG.allowPostFallback || !/(404|405)/.test(message)) {
+          throw error;
+        }
+
+        const postUrl = new URL(path, CONFIG.neteaseApiBase);
+        const body = new URLSearchParams();
+
+        for (const [key, value] of Object.entries(params || {})) {
+          body.set(key, value);
+        }
+
+        body.set("timestamp", Date.now());
+
+        return requestJson(postUrl.toString(), {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+          body,
+        });
+      }
+    }
+
+    async function requestJson(url, options) {
+      const timeout = timeoutSignal(CONFIG.fetchTimeoutMs);
+
+      try {
+        const response = await fetch(url, {
+          cache: "no-store",
+          mode: "cors",
+          ...options,
+          signal: timeout.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`${new URL(url).pathname} returned ${response.status}`);
+        }
+
+        return response.json();
+      } finally {
+        timeout.done?.();
+      }
+    }
+
+    async function searchNeteaseSongs(title, artist) {
+      const queries = searchQueries(title, artist);
+      const byId = new Map();
+
+      for (const keywords of queries) {
+        for (const endpoint of CONFIG.searchEndpoints) {
+          try {
+            const data = await fetchJson(endpoint, {
+              keywords,
+              limit: String(CONFIG.searchLimit),
+              type: "1",
+            });
+
+            const songs = data.result?.songs || [];
+            for (const song of songs) {
+              if (!song?.id || byId.has(song.id)) continue;
+              byId.set(song.id, song);
+            }
+          } catch {
+            // Continue with the next query or endpoint.
+          }
+        }
+      }
+
+      const scored = [...byId.values()]
+        .map((song) => ({ song, score: scoreSong(song, title, artist) }))
+        .sort((a, b) => b.score - a.score);
+
+      return scored.map((item) => item.song);
+    }
+
+    async function loadLyricsBySongId(songId, source, offset = 0, speed = 1) {
+      const data = await fetchJson("/lyric", { id: String(songId) });
+      return {
+        neteaseSongId: songId,
+        lines: parseLrc(data.lrc?.lyric || ""),
+        translations: parseLrc(data.tlyric?.lyric || ""),
+        source,
+        lyricOffsetMs: offset,
+        speedMultiplier: speed,
+      };
+    }
+
+    async function loadLyricsByAudioMatch(title, artist, beatmap) {
+      const match = await audioMatchCurrentBeatmap(beatmap);
+      const song = match.song;
+      const result = await loadLyricsBySongId(
+        song.id,
+        `audio match ${song.id}: ${song.name || title}`,
+        match.offsetMs,
+        1
+      );
+
+      result.title = title;
+      result.artist = artist;
+      result.audioMatchSource = "netease audio match";
+      result.audioMatchStartTimeMs = match.startTimeMs;
+      result.audioMatchSampleStartMs = match.sampleStartMs;
+      result.audioMatchEffectiveSampleStartMs = match.effectiveSampleStartMs;
+      result.audioMatchSpeed = match.speed;
+      result.autoOffsetMs = match.offsetMs;
+      result.autoOffsetSource = "netease audio match";
+      writeSongCacheIndex(title, artist, beatmap, result);
+      return result;
+    }
+
+    async function loadLyricsByMetadata(title, artist, beatmap, payload = {}) {
+      const override = getOverride(title, artist, beatmap);
+      const offset = parseNumber(override?.lyricOffsetMs, 0);
+      const speed = parseNumber(override?.speedMultiplier, 1);
+
+      if (override?.lines) {
+        return {
+          lines: parseLrc(override.lines),
+          translations: parseLrc(override.translations || ""),
+          source: override.source || "local override",
+          lyricOffsetMs: offset,
+          speedMultiplier: speed,
+        };
+      }
+
+      const overrideSongId = override?.neteaseSongId || override?.songId;
+      if (overrideSongId) {
+        const result = await loadLyricsBySongId(overrideSongId, `override song id ${overrideSongId}`, offset, speed);
+
+        return result;
+      }
+
+      const cachedSong = getSongCacheEntry(title, artist, beatmap);
+      const cachedSongId = cachedSong?.neteaseSongId || cachedSong?.songId;
+      const cachedAudioMatchOffsetOk = !cachedSong?.audioMatchSource || audioMatchOffsetInRange(cachedSong.lyricOffsetMs);
+      if (cachedSongId && cachedAudioMatchOffsetOk) {
+        const cacheOffset = cacheLyricOffset(cachedSong) + offset;
+        const cacheSpeed = parseNumber(cachedSong.speedMultiplier, 1) * speed;
+        let result = await loadLyricsBySongId(cachedSongId, `song cache ${cachedSongId}`, cacheOffset, cacheSpeed);
+        result = await applyAutoOffset(result, beatmap, payload, override, cachedSong);
+        if (parseNumber(result.autoOffsetMs, 0) !== 0) writeSongCacheIndex(title, artist, beatmap, result);
+
+        return result;
+      }
+
+      let result = await loadNeteaseLyrics(title, artist);
+      result.lyricOffsetMs = parseNumber(result.lyricOffsetMs, 0) + offset;
+      result.speedMultiplier = parseNumber(result.speedMultiplier, 1) * speed;
+      result = await applyAutoOffset(result, beatmap, payload, override, cachedSong);
+      writeSongCacheIndex(title, artist, beatmap, result);
+      return result;
+    }
+
+    async function loadLyricsForTrack(title, artist, beatmap, payload = {}) {
+      if (CONFIG.audioMatchEnabled) {
+        try {
+          return await loadLyricsByAudioMatch(title, artist, beatmap);
+        } catch (error) {
+          if (String(error.message || "").includes("audio match aborted")) throw error;
+          setStatus(`audio match fallback: ${error.message}`);
+        }
+      }
+
+      return loadLyricsByMetadata(title, artist, beatmap, payload);
+    }
+
+    async function loadNeteaseLyrics(title, artist) {
+      const songs = await searchNeteaseSongs(title, artist);
+      if (!songs.length) {
+        return { lines: [], translations: [], source: "" };
+      }
+
+      let bestEmpty = null;
+
+      for (const song of songs.slice(0, Math.max(1, CONFIG.searchLimit))) {
+        try {
+          const data = await fetchJson("/lyric", { id: String(song.id) });
+          const result = {
+            neteaseSongId: song.id,
+            lines: parseLrc(data.lrc?.lyric || ""),
+            translations: parseLrc(data.tlyric?.lyric || ""),
+            source: `${song.name} - ${(song.artists || song.ar || []).map((item) => item.name).join("/")}`,
+          };
+
+          if (result.lines.length) {
+            return result;
+          }
+
+          bestEmpty ||= result;
+        } catch {
+          // Try another candidate. Some songs have no lyric endpoint result.
+        }
+      }
+
+      return bestEmpty || { lines: [], translations: [], source: "" };
+    }
+
+    async function refreshTrack(payload) {
+      const {
+        beatmap,
+        rawTitle,
+        rawArtist,
+        searchTitle,
+        searchArtist,
+        key,
+      } = trackInfoFromPayload(payload);
+
+      updateTimelineDuration(beatmap, payload);
+      titleEl.textContent = rawTitle || "Unknown title";
+      artistEl.textContent = rawArtist || "Unknown artist";
+
+      updateBeatmapColor(beatmap, payload).catch(() => {
+        const fallback = hexToRgb(CONFIG.panelColor);
+        applyPanelColor(fallback);
+        applyAccentColor(fallback);
+      });
+
+      if (!rawTitle) {
+        if (currentTrackKey || pendingTrackKey || lyricLines.length) {
+          currentTrackKey = "";
+          lastSeenTrackKey = "";
+          pendingTrackKey = "";
+          pendingTrackPayload = null;
+          pendingTrackSince = 0;
+          currentDuration = 0;
+          audioMatchAbortController?.abort();
+          clearTimeout(pendingTrackTimer);
+          lyricLoadToken += 1;
+          clearDisplayedLyrics("");
+          setStatus("waiting for beatmap");
+        }
+        return;
+      }
+
+      if (key === currentTrackKey && (loadedLyricsTrackKey === key || loadingLyricsTrackKey === key)) return;
+      if (key === pendingTrackKey && loadingLyricsTrackKey === key) {
+        pendingTrackPayload = payload;
+        return;
+      }
+
+      if (key !== pendingTrackKey) {
+        pendingTrackKey = key;
+        pendingTrackPayload = payload;
+        pendingTrackSince = Date.now();
+        updateTimelineDuration(beatmap, payload, true);
+        clearTimeout(pendingTrackTimer);
+        lyricLoadToken += 1;
+        clearDisplayedLyrics("Searching lyrics", { keepTrackState: loadingLyricsTrackKey === key || loadedLyricsTrackKey === key });
+        setStatus(`pending: ${searchArtist ? `${searchArtist} - ` : ""}${searchTitle}`);
+        pendingTrackTimer = setTimeout(() => {
+          if (pendingTrackKey === key) {
+            refreshTrack(pendingTrackPayload || payload).catch((error) => {
+              setStatus(`track refresh error: ${error.message}`);
+            });
+          }
+        }, 320);
+        return;
+      }
+
+      pendingTrackPayload = payload;
+
+      if (Date.now() - pendingTrackSince < 300) return;
+
+      pendingTrackKey = "";
+      pendingTrackPayload = null;
+      pendingTrackSince = 0;
+      clearTimeout(pendingTrackTimer);
+      currentTrackKey = key;
+
+      const token = ++lyricLoadToken;
+      currentSpeedMultiplier = parseSpeedMultiplier(beatmap.version);
+      loadingLyricsTrackKey = key;
+      clearDisplayedLyrics("Searching lyrics", { keepTrackState: true });
+      updateTimelineDuration(beatmap, payload);
+      setStatus(`searching: ${searchArtist ? `${searchArtist} - ` : ""}${searchTitle}`);
+
+      try {
+        const result = await loadLyricsForTrack(searchTitle, searchArtist, beatmap, payload);
+        if (token !== lyricLoadToken) return;
+
+        loadingLyricsTrackKey = "";
+        lyricLines = result.lines;
+        translatedLines = result.translations;
+        loadedLyricsTrackKey = key;
+        currentSpeedMultiplier *= parseNumber(result.speedMultiplier, 1);
+        currentTrackOffsetMs = parseNumber(result.lyricOffsetMs, 0);
+        currentAutoOffsetSource = result.autoOffsetSource || "";
+        updateOffsetBadge();
+
+        if (lyricLines.length) {
+          currentLineEl.textContent = "Lyrics ready";
+          setStatus(`lyrics: ${result.source || "loaded"} | offset ${formatSignedMs(CONFIG.lyricOffsetMs + currentTrackOffsetMs)}`);
+          lastRenderedLyricIndex = -2;
+          renderLyrics(lastLiveTime);
+        } else {
+          currentLineEl.textContent = "No synced lyrics found";
+          setStatus("lyrics: no synced lrc found");
+          lastRenderedLyricIndex = -2;
+        }
+      } catch (error) {
+        if (token !== lyricLoadToken) return;
+
+        loadingLyricsTrackKey = "";
+        clearDisplayedLyrics("Lyrics service unavailable");
+        currentLineEl.textContent = "Lyrics service unavailable";
+        setStatus(`lyrics api error: ${error.message}`);
+      }
+    }
+
+    function connectTosu() {
+      clearTimeout(tosuReconnectTimer);
+      const connectionId = ++tosuConnectionId;
+
+      try {
+        tosuSocket?.close();
+      } catch {
+        // The old socket may already be closed.
+      }
+
+      const socket = new WebSocket(`${CONFIG.tosuWebSocket}?l=${getCounterPath()}`);
+      tosuSocket = socket;
+
+      socket.addEventListener("open", () => {
+        if (connectionId !== tosuConnectionId) return;
+        setStatus("tosu websocket: connected");
+      });
+
+      socket.addEventListener("message", (event) => {
+        if (connectionId !== tosuConnectionId) return;
+
+        try {
+          const data = JSON.parse(event.data);
+          const info = trackInfoFromPayload(data);
+          const beatmap = info.beatmap;
+          const incomingKey = info.key;
+          const incomingLiveTime = Number(beatmap.time?.live || 0);
+          const liveTimeReset = lastSeenLiveTime > 5000 && incomingLiveTime < Math.max(1200, lastSeenLiveTime - 3000);
+          const trackChanged = Boolean(incomingKey && incomingKey !== lastSeenTrackKey);
+
+          if (info.rawTitle && incomingKey && trackChanged) {
+            lastSeenTrackKey = incomingKey;
+            if ((loadedLyricsTrackKey && loadedLyricsTrackKey !== incomingKey) || (loadingLyricsTrackKey && loadingLyricsTrackKey !== incomingKey)) {
+              lyricLoadToken += 1;
+              clearDisplayedLyrics("Searching lyrics");
+            }
+          } else if (liveTimeReset && !incomingKey) {
+            currentTrackKey = "";
+            pendingTrackKey = "";
+            pendingTrackPayload = null;
+            pendingTrackSince = 0;
+            clearTimeout(pendingTrackTimer);
+            lyricLoadToken += 1;
+            clearDisplayedLyrics("Searching lyrics");
+          }
+
+          lastSeenLiveTime = incomingLiveTime;
+          lastLiveTime = Number(beatmap.time?.live || 0);
+          updateTimelineDuration(beatmap, data);
+
+          refreshTrack(data).catch((error) => {
+            setStatus(`track refresh error: ${error.message}`);
+          });
+          renderTimeline(lastLiveTime);
+          renderLyrics(lastLiveTime);
+        } catch (error) {
+          setStatus(`tosu data error: ${error.message}`);
+        }
+      });
+
+      socket.addEventListener("close", () => {
+        if (connectionId !== tosuConnectionId) return;
+        setStatus("tosu websocket: reconnecting");
+        clearTimeout(tosuReconnectTimer);
+        tosuReconnectTimer = setTimeout(connectTosu, CONFIG.retryDelayMs);
+      });
+
+      socket.addEventListener("error", () => {
+        if (connectionId !== tosuConnectionId) return;
+        socket.close();
+      });
+    }
+
+    function connectSettings() {
+      clearTimeout(settingsReconnectTimer);
+      const connectionId = ++settingsConnectionId;
+
+      try {
+        settingsSocket?.close();
+      } catch {
+        // The old socket may already be closed.
+      }
+
+      try {
+        settingsSocket = new WebSocket(`ws://127.0.0.1:24050/websocket/commands?l=${getCounterPath()}`);
+      } catch {
+        return;
+      }
+
+      settingsSocket.addEventListener("open", () => {
+        if (connectionId !== settingsConnectionId) return;
+
+        try {
+          settingsSocket.send(`getSettings:${getCounterPath()}`);
+        } catch {
+          // Settings are optional; defaults still work.
+        }
+      });
+
+      settingsSocket.addEventListener("message", (event) => {
+        if (connectionId !== settingsConnectionId) return;
+
+        try {
+          const payload = JSON.parse(event.data);
+          const command = payload.command || payload.event || payload.type;
+
+          if (Array.isArray(payload)) {
+            applySettings(payload);
+          } else if (command === "getSettings") {
+            applySettings(payload.message || payload.settings || payload.data || payload);
+          } else if (!command || String(command).toLowerCase().includes("settings")) {
+            applySettings(payload.settings || payload.data || payload.message || payload);
+          }
+        } catch (error) {
+          setStatus(`settings error: ${error.message}`);
+        }
+      });
+
+      settingsSocket.addEventListener("close", () => {
+        if (connectionId !== settingsConnectionId) return;
+        clearTimeout(settingsReconnectTimer);
+        settingsReconnectTimer = setTimeout(connectSettings, CONFIG.retryDelayMs);
+      });
+    }
+
+    applyVisualConfig();
+    loadSettingsFile().finally(() => Promise.allSettled([
+      loadLocalOverrides(),
+      loadSongCacheIndex(),
+      loadSongAliases(),
+    ])).finally(() => {
+      connectSettings();
+      connectTosu();
+    });
+  </script>
+</body>
+</html>

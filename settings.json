@@ -1,0 +1,269 @@
+[
+  {
+    "uniqueID": "hLyrics",
+    "type": "header",
+    "title": "歌词 / Lyrics",
+    "description": "",
+    "options": [],
+    "value": ""
+  },
+  {
+    "uniqueID": "neteaseApiBase",
+    "type": "text",
+    "title": "网易云 API 地址 / NetEase API Base",
+    "description": "本地网易云 API 地址 / Local NetEase Cloud Music API base URL.",
+    "options": [],
+    "value": "http://127.0.0.1:3000"
+  },
+  {
+    "uniqueID": "lyricOffsetMs",
+    "type": "number",
+    "title": "全局歌词偏移 / Lyric Offset",
+    "description": "单位毫秒。歌词太晚填正数，太早填负数 / In milliseconds. Positive shows later lyric lines earlier; negative delays them.",
+    "options": [],
+    "value": 0
+  },
+  {
+    "uniqueID": "hAudioMatch",
+    "type": "header",
+    "title": "听歌识曲 / Audio Match",
+    "description": "",
+    "options": [],
+    "value": ""
+  },
+  {
+    "uniqueID": "audioMatchEnabled",
+    "type": "checkbox",
+    "title": "启用听歌识曲 / Enable Audio Match",
+    "description": "开启后用当前谱面音频识别网易云歌曲并接管歌词加载；关闭后使用标题搜索和缓存 / When enabled, current beatmap audio identifies the NetEase song and takes over lyric loading.",
+    "options": [],
+    "value": false
+  },
+  {
+    "uniqueID": "audioMatchStartSeconds",
+    "type": "number",
+    "title": "识曲开始时间 / Match Start",
+    "description": "负数时自动取歌曲中点前后各 7.5 秒；非负数时从指定秒数开始取样 / Negative uses a 15s window centered on the song; non-negative starts from this second.",
+    "options": [],
+    "value": -1
+  },
+  {
+    "uniqueID": "audioMatchDurationSeconds",
+    "type": "number",
+    "title": "识曲时长 / Match Duration",
+    "description": "开始时间为非负数时使用的取样秒数；开始时间为负数时固定使用 15 秒 / Sample length for non-negative Match Start; negative Match Start always uses 15s.",
+    "options": [],
+    "value": 15
+  },
+  {
+    "uniqueID": "audioMatchMinOffsetMs",
+    "type": "number",
+    "title": "识曲最小偏移 / Audio Match Min Offset",
+    "description": "小于此值的识曲偏移会被视为异常并回退标题搜索 / Audio-match offsets below this are rejected and metadata search is used.",
+    "options": [],
+    "value": -30000
+  },
+  {
+    "uniqueID": "audioMatchMaxOffsetMs",
+    "type": "number",
+    "title": "识曲最大偏移 / Audio Match Max Offset",
+    "description": "大于此值的识曲偏移会被视为异常并回退标题搜索 / Audio-match offsets above this are rejected and metadata search is used.",
+    "options": [],
+    "value": 30000
+  },
+  {
+    "uniqueID": "autoOffsetFromFirstObject",
+    "type": "checkbox",
+    "title": "首句自动偏移 / First-Line Auto Offset",
+    "description": "用第一句歌词和第一个物件估算偏移，默认关闭；听歌识曲开启时不会使用它 / Estimate offset from first lyric and first object, disabled by default; ignored when Audio Match is enabled.",
+    "options": [],
+    "value": false
+  },
+  {
+    "uniqueID": "autoOffsetMaxMs",
+    "type": "number",
+    "title": "自动偏移上限 / Auto Offset Limit",
+    "description": "自动估算偏移的最大绝对值，单位毫秒 / Maximum absolute auto offset in milliseconds.",
+    "options": [],
+    "value": 45000
+  },
+  {
+    "uniqueID": "autoOffsetLeadMs",
+    "type": "number",
+    "title": "自动提前量 / Auto Offset Lead",
+    "description": "歌词普遍滞后时增大它，单位毫秒 / Extra milliseconds added when lyrics feel late.",
+    "options": [],
+    "value": 900
+  },
+  {
+    "uniqueID": "autoSpeedFromDifficulty",
+    "type": "checkbox",
+    "title": "难度名自动倍速 / Auto Speed From Difficulty",
+    "description": "从难度名读取 1.2x 或 x1.2 并缩放歌词时间 / Read 1.2x or x1.2 from difficulty name.",
+    "options": [],
+    "value": true
+  },
+  {
+    "uniqueID": "speedMultiplier",
+    "type": "number",
+    "title": "手动倍速 / Manual Speed Multiplier",
+    "description": "额外歌词速度倍率 / Extra lyric speed multiplier.",
+    "options": [],
+    "value": 1
+  },
+  {
+    "uniqueID": "contextBefore",
+    "type": "number",
+    "title": "上一行数量 / Previous Lines",
+    "description": "当前歌词前显示多少行 / How many previous lyric lines to show.",
+    "options": [],
+    "value": 1
+  },
+  {
+    "uniqueID": "contextAfter",
+    "type": "number",
+    "title": "下一行数量 / Next Lines",
+    "description": "当前歌词后显示多少行 / How many next lyric lines to show.",
+    "options": [],
+    "value": 1
+  },
+  {
+    "uniqueID": "showTranslation",
+    "type": "checkbox",
+    "title": "显示翻译 / Show Translation",
+    "description": "网易云返回翻译歌词时显示翻译 / Show translated lyrics when available.",
+    "options": [],
+    "value": true
+  },
+  {
+    "uniqueID": "searchLimit",
+    "type": "number",
+    "title": "搜索候选数 / Search Limit",
+    "description": "标题搜索时检查多少个网易云候选 / How many NetEase candidates to inspect.",
+    "options": [],
+    "value": 8
+  },
+  {
+    "uniqueID": "localOverridesPath",
+    "type": "text",
+    "title": "覆盖文件路径 / Overrides Path",
+    "description": "只读本地覆盖 JSON 路径 / Read-only local override JSON path.",
+    "options": [],
+    "value": "lyrics-overrides.json"
+  },
+  {
+    "uniqueID": "songCachePath",
+    "type": "text",
+    "title": "缓存文件路径 / Song Cache Path",
+    "description": "可编辑歌曲 ID 缓存 JSON 路径 / Editable song id cache JSON path.",
+    "options": [],
+    "value": "song-cache.json"
+  },
+  {
+    "uniqueID": "songCacheWriteEndpoint",
+    "type": "text",
+    "title": "缓存写入器 / Song Cache Writer",
+    "description": "可选本地写入器地址；启动 cache-writer.js 后填 http://127.0.0.1:3001/song-cache / Optional local writer endpoint.",
+    "options": [],
+    "value": ""
+  },
+  {
+    "uniqueID": "hLayout",
+    "type": "header",
+    "title": "布局 / Layout",
+    "description": "",
+    "options": [],
+    "value": ""
+  },
+  {
+    "uniqueID": "overlayWidthPx",
+    "type": "number",
+    "title": "面板宽度 / Overlay Width",
+    "description": "面板宽度，单位像素 / Panel width in pixels.",
+    "options": [],
+    "value": 960
+  },
+  {
+    "uniqueID": "lyricsHeightPx",
+    "type": "number",
+    "title": "歌词高度 / Lyrics Height",
+    "description": "歌词区域固定高度，单位像素 / Fixed lyric viewport height in pixels.",
+    "options": [],
+    "value": 190
+  },
+  {
+    "uniqueID": "hTheme",
+    "type": "header",
+    "title": "主题 / Theme",
+    "description": "",
+    "options": [],
+    "value": ""
+  },
+  {
+    "uniqueID": "panelColorMode",
+    "type": "options",
+    "title": "面板颜色模式 / Panel Color Mode",
+    "description": "manual 使用手动颜色；beatmap 从背景取色 / manual uses Panel Color; beatmap samples background.",
+    "options": [
+      "beatmap",
+      "manual"
+    ],
+    "value": "beatmap"
+  },
+  {
+    "uniqueID": "panelColor",
+    "type": "color",
+    "title": "面板颜色 / Panel Color",
+    "description": "备用或手动面板颜色 / Fallback or manual panel color.",
+    "options": [],
+    "value": "#090c12"
+  },
+  {
+    "uniqueID": "panelOpacity",
+    "type": "number",
+    "title": "面板透明度 / Panel Opacity",
+    "description": "范围 0 到 1 / Range 0 to 1.",
+    "options": [],
+    "value": 0.5
+  },
+  {
+    "uniqueID": "beatmapColorBlend",
+    "type": "number",
+    "title": "背景混合强度 / Beatmap Color Blend",
+    "description": "背景取色后向面板色混合；越高越暗更稳定 / Higher is darker and steadier.",
+    "options": [],
+    "value": 0.72
+  },
+  {
+    "uniqueID": "autoAccentFromBeatmap",
+    "type": "checkbox",
+    "title": "背景强调色 / Accent From Beatmap",
+    "description": "用背景取色更新翻译和进度条颜色 / Use sampled background color for accent and progress bar.",
+    "options": [],
+    "value": true
+  },
+  {
+    "uniqueID": "hNetwork",
+    "type": "header",
+    "title": "网络 / Network",
+    "description": "",
+    "options": [],
+    "value": ""
+  },
+  {
+    "uniqueID": "fetchTimeoutMs",
+    "type": "number",
+    "title": "请求超时 / Fetch Timeout",
+    "description": "网易云 API 请求超时时间，单位毫秒 / NetEase API timeout in milliseconds.",
+    "options": [],
+    "value": 4500
+  },
+  {
+    "uniqueID": "allowPostFallback",
+    "type": "checkbox",
+    "title": "POST 兜底 / POST Fallback",
+    "description": "GET 遇到 HTTP 404/405 时改用 POST 重试 / Retry with POST when GET returns HTTP 404/405.",
+    "options": [],
+    "value": true
+  }
+]
