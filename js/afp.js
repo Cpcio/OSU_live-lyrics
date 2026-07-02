@@ -1,4 +1,4 @@
-'use strict'
+﻿'use strict'
 const WASM_BINARY_PLACEHOLDER = 'WASM_BINARY_PLACEHOLDER';
 // See https://github.com/Distributive-Network/PythonMonkey/issues/266
 if (typeof globalThis.setInterval != 'function'){

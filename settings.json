@@ -35,7 +35,7 @@
     "uniqueID": "audioMatchEnabled",
     "type": "checkbox",
     "title": "启用听歌识曲 / Enable Audio Match",
-    "description": "开启后用当前谱面音频识别网易云歌曲并接管歌词加载；关闭后使用标题搜索和缓存 / When enabled, current beatmap audio identifies the NetEase song and takes over lyric loading.",
+    "description": "开启后用当前谱面音频识别网易云歌曲并优先管理歌词加载；关闭后仅使用标题搜索 / When enabled, current beatmap audio identifies the NetEase song and prioritizes lyric loading; disabled uses title search only.",
     "options": [],
     "value": false
   },
@@ -99,7 +99,7 @@
     "uniqueID": "autoSpeedFromDifficulty",
     "type": "checkbox",
     "title": "难度名自动倍速 / Auto Speed From Difficulty",
-    "description": "从难度名读取 1.2x 或 x1.2 并缩放歌词时间 / Read 1.2x or x1.2 from difficulty name.",
+    "description": "从难度名读取类似的倍速关键词并缩放歌词时间 / Read speed-like keywords from difficulty name and scale lyric timing.",
     "options": [],
     "value": true
   },
@@ -142,14 +142,6 @@
     "description": "标题搜索时检查多少个网易云候选 / How many NetEase candidates to inspect.",
     "options": [],
     "value": 8
-  },
-  {
-    "uniqueID": "localOverridesPath",
-    "type": "text",
-    "title": "覆盖文件路径 / Overrides Path",
-    "description": "只读本地覆盖 JSON 路径 / Read-only local override JSON path.",
-    "options": [],
-    "value": "lyrics-overrides.json"
   },
   {
     "uniqueID": "songCachePath",

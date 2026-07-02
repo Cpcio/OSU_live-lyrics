@@ -304,7 +304,6 @@
       searchEndpoints: ["/search", "/cloudsearch"],
       fetchTimeoutMs: 4500,
       allowPostFallback: true,
-      localOverridesPath: "lyrics-overrides.json",
       songCachePath: "song-cache.json",
       songCacheWriteEndpoint: "",
       aliasPath: "",
@@ -341,7 +340,6 @@
     let lastTimelineBucket = -1;
     let lastLiveTime = 0;
     let lastSeenLiveTime = 0;
-    let localOverrides = {};
     let songCacheIndex = {};
     let externalAliases = {};
     let tosuSocket = null;
@@ -436,7 +434,6 @@
 
     function applySettings(payload) {
       const settings = normalizeSettingsPayload(payload);
-      const previousOverridesPath = CONFIG.localOverridesPath;
       const previousSongCachePath = CONFIG.songCachePath;
       const previousAliasPath = CONFIG.aliasPath;
       const mapping = {
@@ -465,7 +462,6 @@
         autoAccentFromBeatmap: "boolean",
         fetchTimeoutMs: "number",
         allowPostFallback: "boolean",
-        localOverridesPath: "string",
         songCachePath: "string",
         songCacheWriteEndpoint: "string",
         aliasPath: "string",
@@ -481,9 +477,6 @@
 
       applyVisualConfig();
       updateOffsetBadge();
-      if (CONFIG.localOverridesPath !== previousOverridesPath) {
-        loadLocalOverrides();
-      }
       if (CONFIG.songCachePath !== previousSongCachePath) {
         loadSongCacheIndex();
       }
@@ -1020,17 +1013,6 @@
       ].filter(Boolean)).join("::");
     }
 
-    function getOverride(title, artist, beatmap) {
-      const keys = trackKeys(title, artist, beatmap);
-      const tracks = localOverrides.tracks || {};
-
-      for (const key of keys) {
-        if (key && tracks[key]) return tracks[key];
-      }
-
-      return null;
-    }
-
     function getSongCacheEntry(title, artist, beatmap) {
       const keys = trackKeys(title, artist, beatmap);
       const tracks = songCacheIndex.tracks || {};
@@ -1104,19 +1086,6 @@
         }
       } catch {
         // Static counters can run without a cache writer.
-      }
-    }
-
-    async function loadLocalOverrides() {
-      try {
-        const response = await fetch(CONFIG.localOverridesPath, { cache: "no-store" });
-        if (!response.ok) {
-          localOverrides = {};
-          return;
-        }
-        localOverrides = await response.json();
-      } catch {
-        localOverrides = {};
       }
     }
 
@@ -1722,16 +1691,15 @@
       return 0;
     }
 
-    function hasManualTrackOffset(result, override, cachedSong) {
-      if (parseNumber(override?.lyricOffsetMs, 0) !== 0) return true;
+    function hasManualTrackOffset(result, cachedSong) {
       if (parseNumber(cachedSong?.lyricOffsetMs, 0) !== 0 && !isAutoOffsetEntry(cachedSong)) return true;
-      if (override?.manual || cachedSong?.manual) return true;
+      if (cachedSong?.manual) return true;
       return parseNumber(result?.lyricOffsetMs, 0) !== 0;
     }
 
-    async function applyAutoOffset(result, beatmap = {}, payload = {}, override = null, cachedSong = null) {
+    async function applyAutoOffset(result, beatmap = {}, payload = {}, cachedSong = null) {
       if (!CONFIG.autoOffsetFromFirstObject || !result?.lines?.length) return result;
-      if (hasManualTrackOffset(result, override, cachedSong)) return result;
+      if (hasManualTrackOffset(result, cachedSong)) return result;
       if (!window.LyricAlignment?.estimateOffset) return result;
 
       const firstObjectTime = await firstObjectTimeForAlignment(beatmap, payload);
@@ -1986,44 +1954,23 @@
     }
 
     async function loadLyricsByMetadata(title, artist, beatmap, payload = {}) {
-      const override = getOverride(title, artist, beatmap);
-      const offset = parseNumber(override?.lyricOffsetMs, 0);
-      const speed = parseNumber(override?.speedMultiplier, 1);
-
-      if (override?.lines) {
-        return {
-          lines: parseLrc(override.lines),
-          translations: parseLrc(override.translations || ""),
-          source: override.source || "local override",
-          lyricOffsetMs: offset,
-          speedMultiplier: speed,
-        };
-      }
-
-      const overrideSongId = override?.neteaseSongId || override?.songId;
-      if (overrideSongId) {
-        const result = await loadLyricsBySongId(overrideSongId, `override song id ${overrideSongId}`, offset, speed);
-
-        return result;
-      }
-
       const cachedSong = getSongCacheEntry(title, artist, beatmap);
       const cachedSongId = cachedSong?.neteaseSongId || cachedSong?.songId;
+      const offset = parseNumber(cachedSong?.lyricOffsetMs, 0);
+      const speed = parseNumber(cachedSong?.speedMultiplier, 1);
       const cachedAudioMatchOffsetOk = !cachedSong?.audioMatchSource || audioMatchOffsetInRange(cachedSong.lyricOffsetMs);
       if (cachedSongId && cachedAudioMatchOffsetOk) {
-        const cacheOffset = cacheLyricOffset(cachedSong) + offset;
-        const cacheSpeed = parseNumber(cachedSong.speedMultiplier, 1) * speed;
+        const cacheOffset = cacheLyricOffset(cachedSong);
+        const cacheSpeed = speed;
         let result = await loadLyricsBySongId(cachedSongId, `song cache ${cachedSongId}`, cacheOffset, cacheSpeed);
-        result = await applyAutoOffset(result, beatmap, payload, override, cachedSong);
+        result = await applyAutoOffset(result, beatmap, payload, cachedSong);
         if (parseNumber(result.autoOffsetMs, 0) !== 0) writeSongCacheIndex(title, artist, beatmap, result);
 
         return result;
       }
 
       let result = await loadNeteaseLyrics(title, artist);
-      result.lyricOffsetMs = parseNumber(result.lyricOffsetMs, 0) + offset;
-      result.speedMultiplier = parseNumber(result.speedMultiplier, 1) * speed;
-      result = await applyAutoOffset(result, beatmap, payload, override, cachedSong);
+      result = await applyAutoOffset(result, beatmap, payload, cachedSong);
       writeSongCacheIndex(title, artist, beatmap, result);
       return result;
     }
@@ -2311,7 +2258,6 @@
 
     applyVisualConfig();
     loadSettingsFile().finally(() => Promise.allSettled([
-      loadLocalOverrides(),
       loadSongCacheIndex(),
       loadSongAliases(),
     ])).finally(() => {
