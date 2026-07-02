@@ -34,10 +34,9 @@ tosu/
 
 ## 使用
 
-1. 启动本地网易云 API，默认监听 `http://127.0.0.1:3000`。
-2. 启动 tosu。
-3. 在 tosu 中添加并启用本 counter。
-4. 进入 osu! 谱面后，overlay 会自动搜索并同步显示歌词。
+1. 启动[NeteaseCloudMusicApiEnhanced](https://github.com/NeteaseCloudMusicApiEnhanced/api-enhanced)的网易云 API 和 [tosu](https://github.com/tosuapp/tosu)
+2. 将面板添加至tosu的叠加层
+3. 进入 osu! 谱面后，overlay 会自动搜索并同步显示歌词。
 
 大部分选项都可以在 tosu 的 counter settings 面板里自定义设置。
 
