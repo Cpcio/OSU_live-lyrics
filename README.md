@@ -106,4 +106,4 @@ http://127.0.0.1:3001/song-cache
 
 - 网易云有歌曲条目不代表一定有同步 LRC 歌词；如果接口返回空歌词，overlay 会显示 `No synced lyrics found`。
 - 如果某首歌匹配错误，优先在 `song-cache.json` 中手动指定 `neteaseSongId`。
-- 听歌识曲对倍速音频不一定稳定；失败时会回退到标题搜索。
+- 听歌识曲暂时对倍速音频稳定性差；失败时会回退到标题搜索。
