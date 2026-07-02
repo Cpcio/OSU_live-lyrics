@@ -1,20 +1,20 @@
-# tosu Live Lyrics
+# OSU Live Lyrics
 
-一个用于 [tosu](https://github.com/tosuapp/tosu) 的 osu! 游戏内实时歌词 overlay。它会读取当前谱面的标题、作者、播放时间和音频，并通过本地网易云音乐 API 获取同步 LRC 歌词。
+这是一个完全由AI开发的，用于 [tosu](https://github.com/tosuapp/tosu) 的 osu! 游戏内实时歌词 overlay。它会读取当前谱面的标题、作者、播放时间和音频，并通过本地网易云音乐 API 获取同步 LRC 歌词并显示。
 
 ## 功能
 
 - 实时显示当前歌词、上一句/下一句和翻译歌词。
 - 支持标题搜索、歌曲 ID 缓存和手动修正。
 - 可选听歌识曲：使用当前谱面音频识别网易云歌曲，再加载歌词。
-- 支持从难度名读取类似 `1.2x`、`x1.2`、`sped up` 的倍速信息并缩放歌词时间。
+- 支持从难度名读取类似 `1.2x`、`x1.2` 的倍速信息并缩放歌词时间。
 - 支持全局偏移、单曲偏移、自动偏移和右上角偏移显示。
-- 进度条和面板颜色可从当前谱面背景取色。
+- 具有进度条，且颜色可从当前谱面背景取色，也可手动设置。
 - 可选 `cache-writer.js`，把成功匹配的歌曲 ID 写入 `song-cache.json`。
 
 ## 依赖
 
-- tosu，默认地址：`http://127.0.0.1:24050`
+- tosu(https://github.com/tosuapp/tosu)
 - 本地 NetEase Cloud Music API Enhanced，默认地址：`http://127.0.0.1:3000`
 
 需要用到的网易云接口：
