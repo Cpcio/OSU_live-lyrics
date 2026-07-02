@@ -14,20 +14,12 @@
 
 ## 依赖
 
-- tosu(https://github.com/tosuapp/tosu)
-- 本地 NetEase Cloud Music API Enhanced，默认地址：`http://127.0.0.1:3000`
-
-需要用到的网易云接口：
-
-- `/search`
-- `/cloudsearch`
-- `/lyric`
-- `/audio/match`，仅启用听歌识曲时需要
+- [tosu](https://github.com/tosuapp/tosu)
+- [NeteaseCloudMusicApiEnhanced](https://github.com/NeteaseCloudMusicApiEnhanced/api-enhanced)
 
 ## 安装
 
 把本项目文件夹放进 tosu 的 `static` 目录，例如：
-
 ```text
 tosu/
   static/
@@ -38,23 +30,22 @@ tosu/
       song-cache.json
       js/
 ```
-
-然后在 tosu 的 counters 页面添加这个 counter，并在游戏内 overlay 中启用。
+然后在 tosu 的游戏内 overlay 中启用。
 
 ## 使用
 
-1. 启动本地网易云 API，并确保它监听 `http://127.0.0.1:3000`。
+1. 启动本地网易云 API，默认监听 `http://127.0.0.1:3000`。
 2. 启动 tosu。
 3. 在 tosu 中添加并启用本 counter。
 4. 进入 osu! 谱面后，overlay 会自动搜索并同步显示歌词。
 
-大部分选项都可以在 tosu 的 counter settings 面板里修改。
+大部分选项都可以在 tosu 的 counter settings 面板里自定义设置。
 
 ## 常用设置
 
 - `NetEase API Base`：本地网易云 API 地址。
 - `Lyric Offset`：全局歌词偏移，单位毫秒。
-- `Enable Audio Match`：启用听歌识曲。开启后会优先用当前谱面音频识别网易云歌曲并管理歌词加载；关闭后仅使用标题搜索。
+- `Enable Audio Match`：启用听歌识曲功能。开启后会优先用当前谱面音频识别网易云歌曲并管理歌词加载；关闭后仅使用标题搜索。这一功能会导致更高些的内存占用
 - `Match Start`：识曲开始时间。默认 `-1` 表示取歌曲中点前后各 7.5 秒，共 15 秒。
 - `Audio Match Min/Max Offset`：识曲偏移可信范围，默认 `-30000` 到 `30000` 毫秒。
 - `First-Line Auto Offset`：用第一句歌词和谱面第一个物件估算整体偏移，默认关闭。
@@ -65,7 +56,6 @@ tosu/
 ## 缓存和手动修正
 
 `song-cache.json` 用来固定“某个谱面应该使用哪个网易云歌曲 ID”。推荐优先使用具体难度 ID：
-
 ```json
 {
   "tracks": {
@@ -78,29 +68,24 @@ tosu/
   }
 }
 ```
-
 常用字段：
-
 - `neteaseSongId`：网易云歌曲 ID。
 - `lyricOffsetMs`：这首歌单独的歌词偏移。
 - `speedMultiplier`：这首歌单独的歌词速度倍率。
 - `manual`：手动指定时建议设为 `true`。
 - `source`：可选备注，不影响匹配。
+当该文件中存在指定ID、偏移等信息时，在选取该难度时程序会直接使用该结果搜索输出，因此若出现匹配错误，可进行手动修正。
 
 ## 自动写入缓存
 
-浏览器 overlay 不能直接写本地 JSON 文件。如果希望匹配成功后自动写入 `song-cache.json`，启动：
-
+如果希望匹配成功后，将匹配结果自动写入 `song-cache.json`，启动：
 ```text
 node cache-writer.js
 ```
-
 然后在设置里把 `Song Cache Writer` 填为：
-
 ```text
 http://127.0.0.1:3001/song-cache
 ```
-
 不启动写入器也可以正常使用，只是不会自动保存匹配结果。
 
 ## 文件说明
