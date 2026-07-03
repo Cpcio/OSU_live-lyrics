@@ -40,7 +40,7 @@ tosu/
 ## 使用
 
 1. 启动[NeteaseCloudMusicApiEnhanced](https://github.com/NeteaseCloudMusicApiEnhanced/api-enhanced)的网易云 API 和 [tosu](https://github.com/tosuapp/tosu)
-2. 将面板添加至tosu的叠加层
+2. 将面板添加至tosu的叠加层（需要先设置tosu.env，启用叠加层，之后在游戏内默认使用ctrl+shift+space打开，右键选中即可添加）
 3. 进入 osu! 谱面后，overlay 会自动搜索并同步显示歌词。
 
 大部分选项都可以在 tosu 的 counter settings 面板里自定义设置。
