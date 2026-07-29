@@ -1,0 +1,10 @@
+[blacklist]
+# Matching Bilibili titles, descriptions, or authors are skipped.
+手元
+phigros
+
+[whitelist]
+# Matching candidate titles gain score; candidates without a match lose score.
+mv
+official
+公式

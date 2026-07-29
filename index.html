@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -20,6 +20,22 @@
       --progress-color: #84f4d0;
       --timeline-top: #84f4d0;
       --timeline-bottom: #7ca8ff;
+      --lyric-shift: 0px;
+      --overlay-font: "Segoe UI", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+      --lyric-unplayed-opacity: 0.46;
+      --title-font-scale: 1;
+      --artist-font-scale: 1;
+      --lyric-font-scale: 1;
+      --context-font-scale: 1;
+      --translation-font-scale: 1;
+      --offset-font-scale: 1;
+      --time-font-scale: 1;
+      --status-font-scale: 1;
+      --mv-overlay-opacity: 0.58;
+      --mv-brightness: 0.8;
+      --mv-opacity: 1;
+      --mv-crop-width: 0.9;
+      --mv-crop-height: 0.9;
     }
 
     * {
@@ -34,7 +50,7 @@
       overflow: hidden;
       background: transparent;
       color: var(--text-main);
-      font-family: "Segoe UI", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+      font-family: var(--overlay-font);
       letter-spacing: 0;
     }
 
@@ -52,6 +68,46 @@
       box-shadow: 0 20px 48px rgba(0, 0, 0, 0.28);
       text-shadow: 0 2px 10px rgba(0, 0, 0, 0.78);
       contain: layout paint style;
+    }
+
+    .mv-background {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      z-index: 0;
+      display: none;
+      width: calc(100% / var(--mv-crop-width));
+      height: calc(100% / var(--mv-crop-height));
+      object-fit: cover;
+      background: #000;
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+      transform-origin: center;
+      filter: brightness(var(--mv-brightness));
+      opacity: var(--mv-opacity);
+    }
+
+    .overlay.has-mv-background {
+      background: transparent;
+    }
+
+    .overlay.has-mv-background .mv-background {
+      display: block;
+    }
+
+    .overlay.has-mv-background::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      background: rgba(var(--panel-r), var(--panel-g), var(--panel-b), var(--mv-overlay-opacity));
+      pointer-events: none;
+    }
+
+    .overlay > section,
+    .overlay > .status {
+      position: relative;
+      z-index: 2;
     }
 
     .song {
@@ -77,20 +133,18 @@
     }
 
     .title {
-      font-size: calc(27px * var(--scale));
+      font-size: calc(27px * var(--scale) * var(--title-font-scale));
       font-weight: 700;
       line-height: 1.18;
     }
 
     .artist {
       color: var(--text-muted);
-      font-size: calc(17px * var(--scale));
+      font-size: calc(17px * var(--scale) * var(--artist-font-scale));
       line-height: 1.2;
     }
 
     .offset-badge {
-      grid-column: 2;
-      grid-row: 1 / span 2;
       align-self: start;
       min-width: 86px;
       padding: 5px 8px;
@@ -98,12 +152,40 @@
       border-radius: 6px;
       background: rgba(0, 0, 0, 0.18);
       color: var(--accent);
-      font-size: calc(13px * var(--scale));
+      font-size: calc(13px * var(--scale) * var(--offset-font-scale));
       font-weight: 800;
       line-height: 1.15;
       text-align: right;
       white-space: nowrap;
     }
+
+    .song-badges {
+      display: flex;
+      grid-column: 2;
+      grid-row: 1 / span 2;
+      gap: 8px;
+      align-items: flex-start;
+      justify-content: flex-end;
+    }
+
+    .audio-match-badge {
+      display: none;
+      min-width: 86px;
+      padding: 5px 8px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.18);
+      color: var(--text-muted);
+      font-size: calc(13px * var(--scale) * var(--offset-font-scale));
+      font-weight: 800;
+      line-height: 1.15;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .audio-match-badge.is-visible { display: block; }
+    .audio-match-badge.is-success { color: var(--accent); }
+    .audio-match-badge.is-fallback { color: rgba(255, 255, 255, 0.62); }
 
     .lyrics-shell {
       display: grid;
@@ -147,6 +229,7 @@
 
     .lyrics {
       display: grid;
+      position: relative;
       grid-template-rows: 1fr auto 1fr;
       gap: 8px;
       height: var(--lyrics-height);
@@ -169,24 +252,43 @@
       overflow-wrap: anywhere;
       word-break: break-word;
       white-space: normal;
-      transition: opacity 160ms ease, color 160ms ease;
+      transform: translateY(var(--lyric-shift));
+      transition: opacity 220ms ease, color 220ms ease, transform 220ms ease;
       -webkit-box-orient: vertical;
+    }
+
+    .lyrics.is-transitioning .line {
+      opacity: 0;
+      transform: translateY(var(--lyric-shift));
+    }
+
+    .line-ghost {
+      position: absolute;
+      margin: 0;
+      pointer-events: none;
+      z-index: 3;
     }
 
     .line.context-line {
       color: var(--text-muted);
-      font-size: calc(20px * var(--scale));
+      font-size: calc(20px * var(--scale) * var(--context-font-scale));
       line-height: 1.24;
       opacity: 0.78;
       -webkit-line-clamp: 1;
     }
 
     .line.current {
+      position: relative;
       color: var(--text-main);
-      font-size: calc(34px * var(--scale));
+      font-size: calc(34px * var(--scale) * var(--lyric-font-scale));
       font-weight: 800;
       line-height: 1.16;
       -webkit-line-clamp: 2;
+    }
+
+    .current .lyric-progress-unit {
+      color: rgba(255, 255, 255, var(--lyric-unplayed-opacity));
+      transition: color 90ms linear;
     }
 
     .meta-row {
@@ -202,7 +304,7 @@
       display: -webkit-box;
       overflow: hidden;
       color: var(--accent);
-      font-size: calc(20px * var(--scale));
+      font-size: calc(20px * var(--scale) * var(--translation-font-scale));
       font-weight: 600;
       line-height: 1.25;
       overflow-wrap: anywhere;
@@ -215,7 +317,7 @@
 
     .current-time {
       color: var(--accent);
-      font-size: calc(13px * var(--scale));
+      font-size: calc(13px * var(--scale) * var(--time-font-scale));
       font-weight: 800;
       line-height: 1.25;
       text-align: right;
@@ -225,8 +327,12 @@
     .status {
       margin-top: 12px;
       color: rgba(255, 255, 255, 0.62);
-      font-size: calc(13px * var(--scale));
+      font-size: calc(13px * var(--scale) * var(--status-font-scale));
       line-height: 1.2;
+    }
+
+    .overlay:not(.show-debug-status) .status {
+      display: none;
     }
 
     @media (max-width: 960px) {
@@ -255,17 +361,21 @@
 </head>
 <body>
   <main class="overlay" aria-live="polite">
+    <video id="mvBackground" class="mv-background" muted loop playsinline preload="metadata"></video>
     <section class="song">
-      <div id="title" class="title">Waiting for beatmap...</div>
+      <div id="title" class="title">Waiting for beatmap data...</div>
       <div id="artist" class="artist"></div>
-      <div id="offsetBadge" class="offset-badge">offset +0ms</div>
+      <div class="song-badges">
+        <div id="audioMatchBadge" class="audio-match-badge">识曲: 等待</div>
+        <div id="offsetBadge" class="offset-badge">offset +0ms</div>
+      </div>
     </section>
 
     <section class="lyrics-shell">
       <div class="lyrics">
         <div id="beforeLines" class="context"></div>
         <div>
-          <div id="currentLine" class="line current">Waiting for tosu data</div>
+          <div id="currentLine" class="line current">Waiting for tosu WebSocket data</div>
           <div class="meta-row">
             <div id="translation" class="translation"></div>
             <div id="currentTime" class="current-time">00:00.000</div>
@@ -278,7 +388,7 @@
       </div>
     </section>
 
-    <div id="status" class="status">tosu websocket: connecting</div>
+    <div id="status" class="status">tosu websocket: connecting to 127.0.0.1:24050</div>
   </main>
 
   <script src="js/lyric-alignment.js?v=20260702-2"></script>
@@ -287,30 +397,63 @@
   <script>
     const CONFIG = {
       tosuWebSocket: "ws://127.0.0.1:24050/websocket/v2",
-      neteaseApiBase: "http://127.0.0.1:3000",
+      neteaseApiBase: "http://127.0.0.1:3002",
       lyricOffsetMs: 0,
       audioMatchEnabled: true,
       audioMatchStartSeconds: -1,
       audioMatchDurationSeconds: 15,
-      audioMatchMinOffsetMs: -30000,
-      audioMatchMaxOffsetMs: 30000,
+      audioMatchMinOffsetMs: -40000,
+      audioMatchMaxOffsetMs: 100000,
+      audioMatchPitchPreserving: true,
+      audioMatchMultiWindowEnabled: true,
+      audioMatchAlwaysUseAllWindows: true,
+      audioMatchConsensusOffsetMs: 200,
       autoOffsetFromFirstObject: false,
       autoOffsetMaxMs: 45000,
       autoOffsetLeadMs: 900,
       autoSpeedFromDifficulty: true,
+      reuseSameSongSet: true,
+      bpmTagAudioMatchEnabled: true,
       speedMultiplier: 1,
       retryDelayMs: 1200,
       searchLimit: 8,
-      contextBefore: 1,
-      contextAfter: 1,
+      contextBefore: 2,
+      contextAfter: 2,
       showTranslation: true,
-      overlayWidthPx: 960,
-      lyricsHeightPx: 190,
+      lyricTransitionMode: "fade",
+      showAudioMatchBadge: true,
+      showDebugStatus: true,
+      songHeaderFormat: "two-line",
+      lyricProgressEnabled: true,
+      lyricProgressUnplayedOpacity: 0.46,
+      customFontEnabled: false,
+      customFontPath: "",
+      titleFontScale: 1,
+      artistFontScale: 1,
+      lyricFontScale: 1.3,
+      contextFontScale: 1.2,
+      translationFontScale: 1,
+      offsetFontScale: 1,
+      timeFontScale: 1,
+      statusFontScale: 1,
+      overlayWidthPx: 900,
+      lyricsHeightPx: 250,
       panelColor: "#090c12",
       panelOpacity: 0.5,
       panelColorMode: "beatmap",
       beatmapColorBlend: 0.72,
       autoAccentFromBeatmap: true,
+      mvBackgroundEnabled: true,
+      mvBackgroundResolution: 720,
+      mvBackgroundOverlayOpacity: 0.5,
+      mvBackgroundBrightness: 1,
+      mvBackgroundOpacity: 0.7,
+      mvBackgroundCropWidth: 0.78,
+      mvBackgroundCropHeight: 0.9,
+      bilibiliBackgroundEnabled: false,
+      mvBackgroundSourcePriority: "netease",
+      bilibiliMaxDurationDeviationPercent: 8,
+      bilibiliSearchWithoutArtist: true,
       searchEndpoints: ["/search", "/cloudsearch"],
       fetchTimeoutMs: 4500,
       allowPostFallback: true,
@@ -322,6 +465,7 @@
     const titleEl = document.getElementById("title");
     const artistEl = document.getElementById("artist");
     const offsetBadgeEl = document.getElementById("offsetBadge");
+    const audioMatchBadgeEl = document.getElementById("audioMatchBadge");
     const timelineFillEl = document.getElementById("timelineFill");
     const beforeLinesEl = document.getElementById("beforeLines");
     const currentLineEl = document.getElementById("currentLine");
@@ -329,6 +473,9 @@
     const translationEl = document.getElementById("translation");
     const afterLinesEl = document.getElementById("afterLines");
     const statusEl = document.getElementById("status");
+    const lyricsEl = document.querySelector(".lyrics");
+    const overlayEl = document.querySelector(".overlay");
+    const mvBackgroundEl = document.getElementById("mvBackground");
 
     let currentTrackKey = "";
     let lastSeenTrackKey = "";
@@ -357,10 +504,24 @@
     let settingsSocket = null;
     let tosuReconnectTimer = 0;
     let settingsReconnectTimer = 0;
-    let settingsPollTimer = 0;
+    let settingsLiveSyncTimer = 0;
     let tosuConnectionId = 0;
     let settingsConnectionId = 0;
     let audioMatchAbortController = null;
+    let lyricTransitionTimer = 0;
+    let customFontLoadKey = "";
+    let currentLyricProgressUnits = [];
+    let lastLyricProgressRenderAt = 0;
+    let currentAudioMatchState = "idle";
+    let currentAudioMatchConfidence = null;
+    const sameSongSetResults = new Map();
+    let currentMvBackgroundKey = "";
+    let currentNeteaseSongId = "";
+    let currentNeteaseSongMeta = { title: "", artist: "", durationMs: 0 };
+    let mvBackgroundAbortController = null;
+    let currentMvPlaybackPaused = false;
+    let lastMvObservedLiveTime = null;
+    let lastMvLiveAdvanceAt = 0;
 
     function clearDisplayedLyrics(message = "", options = {}) {
       lyricLines = [];
@@ -374,8 +535,16 @@
       currentTrackOffsetMs = 0;
       currentAutoOffsetSource = "";
       updateOffsetBadge();
+      clearTimeout(lyricTransitionTimer);
+      lyricsEl?.classList.remove("is-transitioning");
+      lyricsEl?.querySelectorAll(".line-ghost").forEach((element) => element.remove());
       beforeLinesEl.textContent = "";
+      delete currentLineEl.dataset.lyricKey;
+      delete currentLineEl.dataset.lyricText;
+      currentLyricProgressUnits = [];
+      lastLyricProgressRenderAt = 0;
       currentLineEl.textContent = message;
+      currentLineEl.style.removeProperty("--lyric-progress");
       currentTimeEl.textContent = "";
       translationEl.textContent = "";
       afterLinesEl.textContent = "";
@@ -414,13 +583,29 @@
       if (value && typeof value === "object") {
         if ("value" in value) return value.value;
         if ("selected" in value) return value.selected;
+        if ("name" in value) return value.name;
+        if ("label" in value) return value.label;
         if ("default" in value) return value.default;
       }
       return value;
     }
 
+    function normalizeLyricTransitionMode(value) {
+      if (value && typeof value === "object") value = normalizeSettingValue(value);
+
+      const normalized = String(value ?? "").trim().toLowerCase();
+      if (["0", "fade", "crossfade"].includes(normalized)) return "fade";
+      if (["1", "roll", "slide", "rolling"].includes(normalized)) return "roll";
+      if (["2", "off", "none", "disabled", "false"].includes(normalized)) return "off";
+      if (normalized.includes("off") || normalized.includes("none") || normalized.includes("disabled")) return "off";
+      if (normalized.includes("fade") || normalized.includes("crossfade")) return "fade";
+      if (normalized.includes("roll") || normalized.includes("slide")) return "roll";
+
+      return CONFIG.lyricTransitionMode;
+    }
+
     function normalizeSettingsPayload(payload) {
-      const source = payload?.settings || payload?.data || payload || {};
+      const source = payload?.settings || payload?.data || payload?.message || payload || {};
       const normalized = {};
 
       if (Array.isArray(source)) {
@@ -430,6 +615,19 @@
         }
 
         return normalized;
+      }
+
+      if (source && typeof source === "object" && source.uniqueID) {
+        normalized[source.uniqueID] = normalizeSettingValue(source);
+        return normalized;
+      }
+
+      if (source && typeof source === "object") {
+        const nested = source.settings || source.data || source.message;
+        if (nested && nested !== source) {
+          const nestedSettings = normalizeSettingsPayload(nested);
+          if (Object.keys(nestedSettings).length) return nestedSettings;
+        }
       }
 
       for (const [key, value] of Object.entries(source)) {
@@ -457,15 +655,37 @@
         audioMatchDurationSeconds: "number",
         audioMatchMinOffsetMs: "number",
         audioMatchMaxOffsetMs: "number",
+        audioMatchPitchPreserving: "boolean",
+        audioMatchMultiWindowEnabled: "boolean",
+        audioMatchAlwaysUseAllWindows: "boolean",
+        audioMatchConsensusOffsetMs: "number",
         autoOffsetFromFirstObject: "boolean",
         autoOffsetMaxMs: "number",
         autoOffsetLeadMs: "number",
         autoSpeedFromDifficulty: "boolean",
+        reuseSameSongSet: "boolean",
+        bpmTagAudioMatchEnabled: "boolean",
         speedMultiplier: "number",
         searchLimit: "number",
         contextBefore: "number",
         contextAfter: "number",
         showTranslation: "boolean",
+        lyricTransitionMode: "string",
+        showAudioMatchBadge: "boolean",
+        showDebugStatus: "boolean",
+        songHeaderFormat: "string",
+        lyricProgressEnabled: "boolean",
+        lyricProgressUnplayedOpacity: "number",
+        customFontEnabled: "boolean",
+        customFontPath: "string",
+        titleFontScale: "number",
+        artistFontScale: "number",
+        lyricFontScale: "number",
+        contextFontScale: "number",
+        translationFontScale: "number",
+        offsetFontScale: "number",
+        timeFontScale: "number",
+        statusFontScale: "number",
         overlayWidthPx: "number",
         lyricsHeightPx: "number",
         panelColor: "string",
@@ -473,6 +693,17 @@
         panelColorMode: "string",
         beatmapColorBlend: "number",
         autoAccentFromBeatmap: "boolean",
+        mvBackgroundEnabled: "boolean",
+        mvBackgroundResolution: "number",
+        mvBackgroundOverlayOpacity: "number",
+        mvBackgroundBrightness: "number",
+        mvBackgroundOpacity: "number",
+        mvBackgroundCropWidth: "number",
+        mvBackgroundCropHeight: "number",
+        bilibiliBackgroundEnabled: "boolean",
+        mvBackgroundSourcePriority: "string",
+        bilibiliMaxDurationDeviationPercent: "number",
+        bilibiliSearchWithoutArtist: "boolean",
         fetchTimeoutMs: "number",
         allowPostFallback: "boolean",
         songCachePath: "string",
@@ -490,6 +721,14 @@
         let nextValue = CONFIG[key];
         if (type === "number") nextValue = parseNumber(settings[key], CONFIG[key]);
         else if (type === "boolean") nextValue = parseBool(settings[key], CONFIG[key]);
+        else if (key === "lyricTransitionMode") nextValue = normalizeLyricTransitionMode(settings[key]);
+        else if (key === "songHeaderFormat") {
+          const value = String(settings[key]).toLowerCase();
+          nextValue = ["1", "single-line", "single", "one-line"].includes(value) ? "single-line" : "two-line";
+        }
+        else if (key === "mvBackgroundSourcePriority") {
+          nextValue = String(settings[key]).toLowerCase() === "bilibili" ? "bilibili" : "netease";
+        }
         else nextValue = String(settings[key]);
 
         if (CONFIG[key] !== nextValue) {
@@ -501,6 +740,16 @@
       if (!recognized || !changed) return false;
 
       applyVisualConfig();
+      applyCustomFont();
+      applyDebugStatusVisibility();
+      if ("bilibiliBackgroundEnabled" in settings || "mvBackgroundSourcePriority" in settings || "bilibiliMaxDurationDeviationPercent" in settings || "bilibiliSearchWithoutArtist" in settings) {
+        currentMvBackgroundKey = "";
+      }
+      if ("mvBackgroundEnabled" in settings || "mvBackgroundResolution" in settings || "bilibiliBackgroundEnabled" in settings || "mvBackgroundSourcePriority" in settings || "bilibiliMaxDurationDeviationPercent" in settings || "bilibiliSearchWithoutArtist" in settings) {
+        refreshMvBackgroundForCurrentTrack();
+      }
+      updateAudioMatchBadge();
+      updateSongHeaderFromLatestPayload();
       updateOffsetBadge();
       if (CONFIG.songCachePath !== previousSongCachePath) {
         loadSongCacheIndex();
@@ -528,13 +777,18 @@
         audioMatchDurationSeconds: CONFIG.audioMatchDurationSeconds,
         audioMatchMinOffsetMs: CONFIG.audioMatchMinOffsetMs,
         audioMatchMaxOffsetMs: CONFIG.audioMatchMaxOffsetMs,
+        audioMatchPitchPreserving: CONFIG.audioMatchPitchPreserving,
+        audioMatchMultiWindowEnabled: CONFIG.audioMatchMultiWindowEnabled,
+        audioMatchAlwaysUseAllWindows: CONFIG.audioMatchAlwaysUseAllWindows,
+        audioMatchConsensusOffsetMs: CONFIG.audioMatchConsensusOffsetMs,
         autoOffsetFromFirstObject: CONFIG.autoOffsetFromFirstObject,
         autoOffsetMaxMs: CONFIG.autoOffsetMaxMs,
         autoOffsetLeadMs: CONFIG.autoOffsetLeadMs,
         autoSpeedFromDifficulty: CONFIG.autoSpeedFromDifficulty,
+        reuseSameSongSet: CONFIG.reuseSameSongSet,
+        bpmTagAudioMatchEnabled: CONFIG.bpmTagAudioMatchEnabled,
         speedMultiplier: CONFIG.speedMultiplier,
         searchLimit: CONFIG.searchLimit,
-        showTranslation: CONFIG.showTranslation,
         songCachePath: CONFIG.songCachePath,
       });
     }
@@ -555,21 +809,6 @@
       refreshTrack(latestTrackPayload).catch((error) => {
         setStatus(`settings refresh error: ${error.message}`);
       });
-    }
-
-    function requestSettingsSnapshot() {
-      if (!settingsSocket || settingsSocket.readyState !== WebSocket.OPEN) return;
-
-      try {
-        settingsSocket.send(`getSettings:${getCounterPath()}`);
-      } catch {
-        // Settings polling is best-effort.
-      }
-    }
-
-    function applySettingsFromAnyPayload(payload, options = {}) {
-      if (!payload || typeof payload !== "object") return false;
-      return applySettings(payload.settings || payload.data?.settings || payload.message?.settings || payload, options);
     }
 
     function hexToRgb(hex) {
@@ -737,8 +976,62 @@
       const panel = hexToRgb(CONFIG.panelColor);
       applyPanelColor(panel);
       document.documentElement.style.setProperty("--panel-alpha", String(clamp(Number(CONFIG.panelOpacity), 0, 1)));
+      document.documentElement.style.setProperty("--mv-overlay-opacity", String(clamp(Number(CONFIG.mvBackgroundOverlayOpacity), 0.15, 0.95)));
+      document.documentElement.style.setProperty("--mv-brightness", String(clamp(Number(CONFIG.mvBackgroundBrightness), 0.25, 1.4)));
+      document.documentElement.style.setProperty("--mv-opacity", String(clamp(Number(CONFIG.mvBackgroundOpacity), 0.1, 1)));
+      document.documentElement.style.setProperty("--mv-crop-width", String(clamp(Number(CONFIG.mvBackgroundCropWidth), 0.5, 1)));
+      document.documentElement.style.setProperty("--mv-crop-height", String(clamp(Number(CONFIG.mvBackgroundCropHeight), 0.5, 1)));
       document.documentElement.style.setProperty("--overlay-width", `${clamp(Number(CONFIG.overlayWidthPx), 360, 1800)}px`);
       document.documentElement.style.setProperty("--lyrics-height", `${clamp(Number(CONFIG.lyricsHeightPx), 132, 620)}px`);
+      document.documentElement.style.setProperty("--lyric-unplayed-opacity", String(clamp(Number(CONFIG.lyricProgressUnplayedOpacity), 0.12, 0.9)));
+      const fontScales = {
+        "--title-font-scale": CONFIG.titleFontScale,
+        "--artist-font-scale": CONFIG.artistFontScale,
+        "--lyric-font-scale": CONFIG.lyricFontScale,
+        "--context-font-scale": CONFIG.contextFontScale,
+        "--translation-font-scale": CONFIG.translationFontScale,
+        "--offset-font-scale": CONFIG.offsetFontScale,
+        "--time-font-scale": CONFIG.timeFontScale,
+        "--status-font-scale": CONFIG.statusFontScale,
+      };
+      for (const [property, value] of Object.entries(fontScales)) {
+        document.documentElement.style.setProperty(property, String(clamp(Number(value), 0.5, 3)));
+      }
+    }
+
+    function applyDebugStatusVisibility() {
+      overlayEl?.classList.toggle("show-debug-status", Boolean(CONFIG.showDebugStatus));
+    }
+
+    function resetCustomFont() {
+      document.documentElement.style.setProperty("--overlay-font", "\"Segoe UI\", \"Microsoft YaHei\", \"Noto Sans CJK SC\", sans-serif");
+    }
+
+    async function applyCustomFont() {
+      const path = String(CONFIG.customFontPath || "").trim();
+      const enabled = Boolean(CONFIG.customFontEnabled && path);
+      const loadKey = enabled ? path : "";
+      if (loadKey === customFontLoadKey) return;
+      customFontLoadKey = loadKey;
+
+      if (!enabled) {
+        resetCustomFont();
+        return;
+      }
+
+      try {
+        const url = new URL(encodeURI(path.replace(/\\/g, "/")), window.location.href).toString();
+        const family = "tosu-custom-lyrics-font";
+        const font = new FontFace(family, `url("${url}") format("truetype")`);
+        const loaded = await font.load();
+        if (customFontLoadKey !== loadKey) return;
+        document.fonts.add(loaded);
+        document.documentElement.style.setProperty("--overlay-font", `"${family}", "Segoe UI", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif`);
+      } catch (error) {
+        if (customFontLoadKey !== loadKey) return;
+        resetCustomFont();
+        setStatus(`custom font unavailable: ${error.message || path}`);
+      }
     }
 
     function applyPanelColor(panel) {
@@ -775,6 +1068,45 @@
       const total = parseNumber(CONFIG.lyricOffsetMs, 0) + parseNumber(currentTrackOffsetMs, 0);
       const autoMark = currentAutoOffsetSource ? " auto" : "";
       offsetBadgeEl.textContent = `offset ${formatSignedMs(total)}${autoMark}`;
+    }
+
+    function updateAudioMatchBadge() {
+      if (!audioMatchBadgeEl) return;
+
+      const labels = {
+        idle: "识曲: 等待",
+        matching: "识曲: 识别中",
+        success: currentAudioMatchConfidence || "1/4",
+        fallback: currentAudioMatchConfidence || "1/4",
+        disabled: "识曲: 关闭",
+      };
+      audioMatchBadgeEl.textContent = labels[currentAudioMatchState] || labels.idle;
+      audioMatchBadgeEl.className = "audio-match-badge";
+      if (CONFIG.showAudioMatchBadge) audioMatchBadgeEl.classList.add("is-visible");
+      if (currentAudioMatchState === "success") audioMatchBadgeEl.classList.add("is-success");
+      if (["fallback", "disabled"].includes(currentAudioMatchState)) audioMatchBadgeEl.classList.add("is-fallback");
+    }
+
+    function setAudioMatchState(state) {
+      currentAudioMatchState = state;
+      updateAudioMatchBadge();
+    }
+
+    function updateSongHeader(title, artist) {
+      const safeTitle = title || "Unknown title";
+      const safeArtist = artist || "Unknown artist";
+      const singleLine = CONFIG.songHeaderFormat === "single-line";
+      const nextTitle = singleLine ? `${safeTitle} / ${safeArtist}` : safeTitle;
+
+      if (titleEl.textContent !== nextTitle) titleEl.textContent = nextTitle;
+      artistEl.hidden = singleLine;
+      if (!singleLine && artistEl.textContent !== safeArtist) artistEl.textContent = safeArtist;
+    }
+
+    function updateSongHeaderFromLatestPayload() {
+      if (!latestTrackPayload) return;
+      const info = trackInfoFromPayload(latestTrackPayload);
+      updateSongHeader(info.rawTitle, info.rawArtist);
     }
 
     function safeText(value) {
@@ -821,23 +1153,46 @@
     }
 
     function isPackTitle(title) {
-      return /\b(pack|packs|collection|collections|practice|ln\s*feast|favorite\s*song\s*9?|zhong\s*wen\s*die\s*bao\s*#?\s*\d*|jack\s*house'?s|acg\s*fantasy|malody\s*4k|compilation|anthlogy|anthology)\b/i.test(safeText(title));
+      return /\b(pack|packs|collection|collections|practice|ln\s*feast|favorite\s*song\s*9?|zhong\s*wen\s*die\s*bao\s*#?\s*\d*|jack\s*house'?s|acg\s*fantasy|malody\s*4k|compilation|anthlogy|anthology|lnex\s*\d+)\b/i.test(safeText(title));
+    }
+
+    function isPackBeatmap(beatmap = {}) {
+      return isPackTitle(beatmap.titleUnicode || "") || isPackTitle(beatmap.title || "");
+    }
+
+    function difficultyBpmTag(version) {
+      const match = safeText(version).match(/[\[\u3010]\s*(\d{2,3})\s*[\]\u3011]/);
+      const bpm = Number(match?.[1]);
+      return Number.isFinite(bpm) && bpm >= 60 && bpm <= 400 ? bpm : 0;
+    }
+
+    function neteaseSongBpm(song = {}) {
+      const bpm = Number(song.bpm || song.tempo || song.metadata?.bpm || 0);
+      return Number.isFinite(bpm) && bpm >= 40 && bpm <= 500 ? bpm : 0;
+    }
+
+    function bpmDifficultyMultiplier(beatmap = {}, neteaseBpm = 0) {
+      if (!CONFIG.bpmTagAudioMatchEnabled || isPackBeatmap(beatmap)) return 1;
+      const taggedBpm = difficultyBpmTag(beatmap.version);
+      const sourceBpm = Number(neteaseBpm);
+      if (!taggedBpm || !Number.isFinite(sourceBpm) || sourceBpm <= 0) return 1;
+      return clamp(taggedBpm / sourceBpm, 0.5, 2.5);
     }
 
     function stripBracketedText(value) {
       return safeText(value)
         .replace(/\([^)]*\)/g, " ")
         .replace(/\[[^\]]*]/g, " ")
-        .replace(/【[^】]*】/g, " ")
-        .replace(/（[^）]*）/g, " ")
+        .replace(/\u3010[^\u3011]*\u3011/g, " ")
+        .replace(/\uFF08[^\uFF09]*\uFF09/g, " ")
         .replace(/\s+/g, " ")
         .trim();
     }
 
     function removeDifficultyDecorations(value) {
       return safeText(value)
-        .replace(/^\s*(?:easy|normal|hard|insane|expert|extra|extreme|master|lunatic|another|hyper|append|challenge|collab|marathon|finale)\s*[:：\-]\s*/i, "")
-        .replace(/^\s*\d+\s*[:：.)-]\s*/, "")
+        .replace(/^\s*(?:easy|normal|hard|insane|expert|extra|extreme|master|lunatic|another|hyper|append|challenge|collab|marathon|finale)\s*[:\uFF1A-]\s*/i, "")
+        .replace(/^\s*\d+\s*[:\uFF1A).-]\s*/, "")
         .replace(/\b(?:\d+(?:\.\d+)?\s*x|x\s*\d+(?:\.\d+)?)\b/gi, " ")
         .replace(/\s+/g, " ")
         .trim();
@@ -847,7 +1202,7 @@
       return safeText(value)
         .replace(/\s+(?:mapped\s+)?by\s+[^-~|/]+$/i, "")
         .replace(/\s+[~]\s+[^-~|/]+$/i, "")
-        .replace(/\s*[-–—]\s*(?:mapped\s+)?by\s+.+$/i, "")
+        .replace(/\s*[-\u2013\u2014]\s*(?:mapped\s+)?by\s+.+$/i, "")
         .replace(/\s+/g, " ")
         .trim();
     }
@@ -876,13 +1231,13 @@
     }
 
     const builtInAliases = {
-      hakkenshawatashi: ["発見者はワタシ"],
-      tapimiruhakkenshawatashi: ["発見者はワタシ"],
-      hakkenshawatashitapimiru: ["発見者はワタシ"],
-      wodeguozhifenniyiban: ["我的果汁分你一半"],
-      wodeguozhifenniyibanflowers: ["我的果汁分你一半"],
-      flowerswodeguozhifenniyiban: ["我的果汁分你一半"],
-      guozhifenniyiban: ["我的果汁分你一半"],
+      hakkenshawatashi: ["\u767a\u898b\u8005\u306f\u30ef\u30bf\u30b7"],
+      tapimiruhakkenshawatashi: ["\u767a\u898b\u8005\u306f\u30ef\u30bf\u30b7"],
+      hakkenshawatashitapimiru: ["\u767a\u898b\u8005\u306f\u30ef\u30bf\u30b7"],
+      wodeguozhifenniyiban: ["\u6211\u7684\u679c\u6c41\u5206\u4f60\u4e00\u534a"],
+      wodeguozhifenniyibanflowers: ["\u6211\u7684\u679c\u6c41\u5206\u4f60\u4e00\u534a"],
+      flowerswodeguozhifenniyiban: ["\u6211\u7684\u679c\u6c41\u5206\u4f60\u4e00\u534a"],
+      guozhifenniyiban: ["\u6211\u7684\u679c\u6c41\u5206\u4f60\u4e00\u534a"],
     };
 
     function mergedAliases() {
@@ -926,7 +1281,7 @@
 
     function parseArtistTitle(value) {
       const text = safeText(value);
-      const match = text.match(/^(.{1,80}?)\s*[-–—]\s*(.{1,120})$/);
+      const match = text.match(/^(.{1,80}?)\s*[-\u2013\u2014]\s*(.{1,120})$/);
       if (!match) return null;
 
       const artist = safeText(match[1]);
@@ -1057,6 +1412,70 @@
       );
     }
 
+    function sameSongSetReuseKey(beatmap = {}) {
+      if (!CONFIG.reuseSameSongSet || isPackBeatmap(beatmap)) return "";
+      const setId = beatmapSetId(beatmap);
+      if (setId) return `set:${setId}`;
+
+      const folder = safeText(
+        beatmap.path?.folder
+        || beatmap.folders?.beatmap
+        || beatmap.files?.folder
+        || beatmap.folder,
+      );
+      if (folder) return `folder:${folder}`;
+
+      const audio = safeText(
+        beatmap.audio
+        || beatmap.audioFile
+        || beatmap.audioFilename
+        || beatmap.files?.audio
+        || beatmap.files?.mp3
+        || beatmap.path?.audio
+        || beatmap.path?.mp3,
+      );
+      if (audio) return `audio:${audio}`;
+
+      const mapPath = safeText(beatmap.path?.full || beatmap.filename || beatmap.file || beatmap.files?.osu);
+      const parentPath = mapPath.replace(/[\\/][^\\/]+$/, "");
+      if (parentPath) return `folder:${parentPath}`;
+
+      const title = normalizeForCompare(beatmap.titleUnicode || beatmap.title || "");
+      const artist = normalizeForCompare(beatmap.artistUnicode || beatmap.artist || "");
+      return title ? `metadata:${artist}::${title}` : "";
+    }
+
+    function rememberSameSongSetResult(beatmap, result) {
+      const key = sameSongSetReuseKey(beatmap);
+      if (!key || !result?.neteaseSongId) return;
+
+      sameSongSetResults.delete(key);
+      sameSongSetResults.set(key, {
+        ...result,
+        lines: result.lines || [],
+        translations: result.translations || [],
+      });
+      while (sameSongSetResults.size > 12) {
+        sameSongSetResults.delete(sameSongSetResults.keys().next().value);
+      }
+    }
+
+    function sameSongSetResult(beatmap) {
+      const key = sameSongSetReuseKey(beatmap);
+      const saved = key ? sameSongSetResults.get(key) : null;
+      if (!saved) return null;
+
+      sameSongSetResults.delete(key);
+      sameSongSetResults.set(key, saved);
+      return {
+        ...saved,
+        lines: saved.lines || [],
+        translations: saved.translations || [],
+        source: `set reuse ${saved.neteaseSongId}`,
+        speedMultiplier: 1,
+      };
+    }
+
     function trackKeys(title, artist, beatmap = {}) {
       const checksum = safeText(beatmap.checksum);
       const difficultyId = beatmapDifficultyId(beatmap);
@@ -1140,6 +1559,8 @@
         keys,
         primaryKey: keys[0] || "",
         neteaseSongId: result.neteaseSongId,
+        neteaseDurationMs: parseNumber(result.neteaseDurationMs, 0),
+        neteaseBpm: parseNumber(result.neteaseBpm, 0),
         title,
         artist,
         beatmapId: beatmapDifficultyId(beatmap),
@@ -1154,6 +1575,7 @@
         audioMatchSampleStartMs: parseNumber(result.audioMatchSampleStartMs, 0),
         audioMatchEffectiveSampleStartMs: parseNumber(result.audioMatchEffectiveSampleStartMs, 0),
         audioMatchSpeed: parseNumber(result.audioMatchSpeed, 1),
+        audioMatchConfidence: result.audioMatchConfidence || "",
         firstLyricTimeMs: parseNumber(result.firstLyricTimeMs, 0),
         firstObjectTimeMs: parseNumber(result.firstObjectTimeMs, 0),
         source: result.source || "",
@@ -1211,14 +1633,26 @@
       try {
         const response = await fetch("./settings.json", { cache: "no-store" });
         if (!response.ok) return;
-        applySettings(await response.json());
+        applySettings(await response.json(), { silent: true });
       } catch {
         // The command channel can still provide settings later.
       }
     }
 
-    function getCounterPath() {
-      return encodeURI(window.COUNTER_PATH || location.pathname);
+    function rawCounterPath() {
+      if (typeof window.COUNTER_PATH === "string" && window.COUNTER_PATH.trim()) {
+        return window.COUNTER_PATH;
+      }
+
+      return `${location.pathname || "/"}${location.search || ""}`;
+    }
+
+    function getCounterPathForCommand() {
+      return encodeURI(rawCounterPath());
+    }
+
+    function getCounterPathForQuery() {
+      return encodeURIComponent(rawCounterPath());
     }
 
     function backgroundCandidates(beatmap, payload = {}) {
@@ -1409,11 +1843,13 @@
       if (signal?.aborted) throw new Error("audio match aborted");
     }
 
-    async function decodeAudioBuffer(buffer) {
+    async function decodeAudioBuffer(buffer, outputSampleRate = 8000) {
       const AudioContextClass = window.AudioContext || window.webkitAudioContext;
       if (!AudioContextClass) throw new Error("AudioContext unavailable");
 
-      const context = new AudioContextClass({ sampleRate: 8000 });
+      const context = outputSampleRate
+        ? new AudioContextClass({ sampleRate: outputSampleRate })
+        : new AudioContextClass();
       try {
         return await context.decodeAudioData(buffer.slice(0));
       } finally {
@@ -1458,6 +1894,26 @@
       };
     }
 
+    function audioMatchWindowAtFraction(audioBuffer, fraction, durationSeconds, speed) {
+      const totalSeconds = audioBuffer.duration || audioBuffer.length / (audioBuffer.sampleRate || 8000);
+      const safeSpeed = Number.isFinite(Number(speed)) && Number(speed) > 0 ? Number(speed) : 1;
+      const targetTotalSeconds = totalSeconds * safeSpeed;
+      const requestedDuration = clamp(Number(durationSeconds) || 15, 3, 30);
+      const actualDurationSeconds = Math.min(totalSeconds, Math.max(1, requestedDuration / safeSpeed));
+      const targetDurationSeconds = actualDurationSeconds * safeSpeed;
+      const center = clamp(Number(fraction), 0, 1) * targetTotalSeconds;
+      const targetStartSeconds = clamp(center - targetDurationSeconds / 2, 0, Math.max(0, targetTotalSeconds - targetDurationSeconds));
+
+      return {
+        actualStartSeconds: targetStartSeconds / safeSpeed,
+        actualDurationSeconds,
+        targetStartSeconds,
+        targetDurationSeconds,
+        totalSeconds,
+        fraction: clamp(Number(fraction), 0, 1),
+      };
+    }
+
     function stretchSamplesForSpeed(samples, speed) {
       const safeSpeed = Number.isFinite(Number(speed)) && Number(speed) > 0 ? Number(speed) : 1;
       if (Math.abs(safeSpeed - 1) < 0.01) return samples;
@@ -1476,25 +1932,239 @@
       return output;
     }
 
-    function audioMatchSpeed(beatmap = {}) {
-      const difficultySpeed = CONFIG.autoSpeedFromDifficulty ? parseSpeedMultiplier(beatmap.version) : 1;
+    function resampleSamples(samples, sourceSampleRate, targetSampleRate = 8000) {
+      const sourceRate = Number(sourceSampleRate) || targetSampleRate;
+      if (sourceRate === targetSampleRate) return samples;
+
+      const outputLength = Math.max(1, Math.round(samples.length * targetSampleRate / sourceRate));
+      const output = new Float32Array(outputLength);
+      const ratio = sourceRate / targetSampleRate;
+      for (let index = 0; index < outputLength; index += 1) {
+        const sourceIndex = index * ratio;
+        const left = Math.floor(sourceIndex);
+        const right = Math.min(samples.length - 1, left + 1);
+        const amount = sourceIndex - left;
+        output[index] = samples[left] * (1 - amount) + samples[right] * amount;
+      }
+      return output;
+    }
+
+    let soundTouchRuntimePromise = null;
+
+    async function stretchSamplesPreservePitch(samples, sourceSampleRate, speed, signal) {
+      const safeSpeed = Number(speed);
+      if (!Number.isFinite(safeSpeed) || Math.abs(safeSpeed - 1) < 0.01) return samples;
+
+      soundTouchRuntimePromise ||= import("./js/soundtouch.js?v=20260717-1");
+      const { SoundTouch, SimpleFilter } = await soundTouchRuntimePromise;
+      throwIfAudioMatchAborted(signal);
+
+      const targetLength = Math.max(1, Math.round(samples.length * safeSpeed));
+      const tailFrames = Math.max(Math.round(sourceSampleRate * 2), 16384);
+      const totalFrames = samples.length + tailFrames;
+      const source = {
+        extract(target, frameCount, position) {
+          const available = Math.max(0, Math.min(frameCount, totalFrames - position));
+          for (let index = 0; index < available; index += 1) {
+            const sourceIndex = position + index;
+            const value = sourceIndex < samples.length ? samples[sourceIndex] : 0;
+            target[index * 2] = value;
+            target[index * 2 + 1] = value;
+          }
+          return available;
+        },
+      };
+      const processor = new SoundTouch();
+      processor.stretch.setParameters(sourceSampleRate, 0, 0, 0);
+      processor.tempo = 1 / safeSpeed;
+      const filter = new SimpleFilter(source, processor);
+      const frameBuffer = new Float32Array(4096 * 2);
+      const chunks = [];
+      let outputLength = 0;
+
+      const maxPasses = Math.ceil((totalFrames * Math.max(1, safeSpeed)) / 4096) + 16;
+      for (let passes = 0; passes < maxPasses; passes += 1) {
+        throwIfAudioMatchAborted(signal);
+        const extracted = filter.extract(frameBuffer, 4096);
+        if (!extracted) break;
+        const chunk = new Float32Array(extracted);
+        for (let index = 0; index < extracted; index += 1) chunk[index] = frameBuffer[index * 2];
+        chunks.push(chunk);
+        outputLength += extracted;
+      }
+
+      if (outputLength < targetLength) throw new Error("pitch-preserving stretch ended before target duration");
+      const output = new Float32Array(targetLength);
+      let offset = 0;
+      for (const chunk of chunks) {
+        if (offset >= targetLength) break;
+        const count = Math.min(chunk.length, targetLength - offset);
+        output.set(chunk.subarray(0, count), offset);
+        offset += count;
+      }
+      return output;
+    }
+
+    function audioMatchSpeed(beatmap = {}, difficultySpeedOverride = null) {
+      const automaticSpeed = CONFIG.autoSpeedFromDifficulty ? parseSpeedMultiplier(beatmap.version) : 1;
+      const overrideSpeed = Number(difficultySpeedOverride);
+      const difficultySpeed = Number.isFinite(overrideSpeed) && overrideSpeed > 0
+        ? overrideSpeed
+        : automaticSpeed;
       const manualSpeed = clamp(parseNumber(CONFIG.speedMultiplier, 1), 0.5, 2.5);
       return clamp(difficultySpeed * manualSpeed, 0.5, 2.5);
     }
 
-    function bestAudioMatchResult(response) {
-      const result = response?.data?.result || [];
-      if (!result.length) return null;
-      return result[0];
+    function audioMatchCandidates(response) {
+      return (response?.data?.result || []).filter((item) => item?.song?.id);
     }
 
-    async function audioMatchCurrentBeatmap(beatmap = {}) {
+    function formatAudioMatchDebug(entries, decision) {
+      const windows = entries
+        .map((entry) => `${Math.round(entry.windowInfo.fraction * 100)}%:${entry.song.id}@${formatSignedMs(entry.offsetMs)}`)
+        .join(", ");
+      return `audio ${decision}; ${windows}`;
+    }
+
+    function audioMatchConfidence(songId, entries, titleIds, includeOuterWindows) {
+      const selectedId = String(songId || "");
+      const windowVotes = entries.filter((entry) => String(entry.song?.id || "") === selectedId).length;
+      const titleVote = titleIds.has(selectedId) ? 1 : 0;
+      const total = includeOuterWindows ? 4 : 2;
+      return `${Math.min(total, windowVotes + titleVote)}/${total}`;
+    }
+
+    async function audioMatchWindowResult(audioBuffer, windowInfo, speed, signal) {
+      let samples = audioMatchSamples(audioBuffer, windowInfo.actualStartSeconds, windowInfo.actualDurationSeconds);
+      const sourceSampleRate = audioBuffer.sampleRate || 8000;
+      const hasSpeedChange = Math.abs(speed - 1) >= 0.01;
+      const attempts = hasSpeedChange
+        ? [
+          { label: "pitch-shift", samples: () => resampleSamples(stretchSamplesForSpeed(samples, speed), sourceSampleRate) },
+          ...(CONFIG.audioMatchPitchPreserving
+            ? [{ label: "preserve-pitch", samples: async () => resampleSamples(
+              await stretchSamplesPreservePitch(samples, sourceSampleRate, speed, signal),
+              sourceSampleRate,
+            ) }]
+            : []),
+        ]
+        : [{ label: "normal", samples: () => resampleSamples(samples, sourceSampleRate) }];
+      let lastError = null;
+
+      try {
+        for (const attempt of attempts) {
+          try {
+            setStatus(`audio match: ${Math.round(windowInfo.fraction * 100)}% ${attempt.label} @ ${speed.toFixed(2)}x`);
+            let matchedSamples = await attempt.samples();
+            const matchDurationSeconds = clamp(matchedSamples.length / 8000, 3, 30);
+            throwIfAudioMatchAborted(signal);
+            const audioFP = await GenerateFP(matchedSamples);
+            matchedSamples = null;
+            throwIfAudioMatchAborted(signal);
+            const data = await fetchJson("/audio/match", {
+              duration: String(matchDurationSeconds),
+              audioFP,
+            });
+            throwIfAudioMatchAborted(signal);
+            const candidates = audioMatchCandidates(data);
+            const match = candidates[0];
+            if (!match) {
+              throw new Error(`audio match no result${data?.data?.noMatchReason !== undefined ? ` (${data.data.noMatchReason})` : ""}`);
+            }
+
+            const targetSampleStartMs = Math.round(windowInfo.targetStartSeconds * 1000);
+            const matchStartMs = parseNumber(match.startTime, targetSampleStartMs);
+            const offsetMs = Math.round(matchStartMs - targetSampleStartMs);
+            if (!audioMatchOffsetInRange(offsetMs)) {
+              throw new Error(`audio match offset out of range ${offsetMs}ms`);
+            }
+
+            return {
+              song: match.song,
+              startTimeMs: matchStartMs,
+              sampleStartMs: Math.round(windowInfo.actualStartSeconds * 1000),
+              effectiveSampleStartMs: targetSampleStartMs,
+              offsetMs,
+              speed,
+              mode: attempt.label,
+              raw: match,
+              candidateCount: candidates.length,
+              windowInfo,
+            };
+          } catch (error) {
+            if (String(error.message || "").includes("audio match aborted")) throw error;
+            lastError = error;
+          }
+        }
+      } finally {
+        samples = null;
+      }
+
+      throw lastError || new Error("audio match failed");
+    }
+
+    function audioMatchConsensus(entries) {
+      const groups = new Map();
+      for (const entry of entries) {
+        const id = String(entry.song?.id || "");
+        if (!id) continue;
+        const list = groups.get(id) || [];
+        list.push(entry);
+        groups.set(id, list);
+      }
+
+      const repeated = [...groups.values()]
+        .filter((group) => group.length >= 2)
+        .sort((left, right) => right.length - left.length || Number(left[0].song.id) - Number(right[0].song.id))[0];
+      if (!repeated) return null;
+
+      const threshold = clamp(Number(CONFIG.audioMatchConsensusOffsetMs), 50, 2000);
+      const pairs = [];
+      for (let left = 0; left < repeated.length; left += 1) {
+        for (let right = left + 1; right < repeated.length; right += 1) {
+          pairs.push({ left: repeated[left], right: repeated[right], delta: Math.abs(repeated[left].offsetMs - repeated[right].offsetMs) });
+        }
+      }
+      pairs.sort((left, right) => left.delta - right.delta);
+      const preferred = repeated.find((entry) => entry.windowInfo.fraction === 0.5) || repeated[0];
+
+      if (pairs[0] && pairs[0].delta <= threshold) {
+        return {
+          ...preferred,
+          offsetMs: Math.round((pairs[0].left.offsetMs + pairs[0].right.offsetMs) / 2),
+          decision: `multi-window consensus ${repeated.length}x, delta ${Math.round(pairs[0].delta)}ms`,
+        };
+      }
+
+      if (repeated.length >= 3) {
+        const averageOffsetMs = Math.round(
+          repeated.reduce((total, entry) => total + entry.offsetMs, 0) / repeated.length,
+        );
+        return {
+          ...preferred,
+          offsetMs: averageOffsetMs,
+          decision: "multi-window same ID, average offset",
+        };
+      }
+
+      return {
+        ...preferred,
+        decision: `multi-window same ID, offset disagreement ${Math.round(pairs[0]?.delta || 0)}ms`,
+      };
+    }
+
+    async function audioMatchCurrentBeatmap(beatmap = {}, searchMeta = {}, options = {}) {
       if (!CONFIG.audioMatchEnabled) return null;
       if (typeof GenerateFP !== "function") throw new Error("audio fingerprint runtime unavailable");
 
       const requestedStartSeconds = parseNumber(CONFIG.audioMatchStartSeconds, -1);
       const requestedDurationSeconds = clamp(parseNumber(CONFIG.audioMatchDurationSeconds, 15), 3, 30);
-      const speed = audioMatchSpeed(beatmap);
+      const speed = audioMatchSpeed(beatmap, options.difficultySpeedMultiplier);
+      const useMultiWindow = CONFIG.audioMatchMultiWindowEnabled && requestedStartSeconds < 0;
+      const alwaysUseAllWindows = useMultiWindow && CONFIG.audioMatchAlwaysUseAllWindows;
+      const titleCandidatesPromise = useMultiWindow
+        ? Promise.resolve(options.titleCandidates || searchNeteaseSongs(searchMeta.title || "", searchMeta.artist || "").catch(() => []))
+        : Promise.resolve([]);
 
       audioMatchAbortController?.abort();
       audioMatchAbortController = new AbortController();
@@ -1502,48 +2172,76 @@
 
       let buffer = await currentBeatmapAudioBuffer(signal);
       throwIfAudioMatchAborted(signal);
-      let audioBuffer = await decodeAudioBuffer(buffer);
+      const useNativeRate = Math.abs(speed - 1) >= 0.01 && CONFIG.audioMatchPitchPreserving;
+      let audioBuffer = await decodeAudioBuffer(buffer, useNativeRate ? 0 : 8000);
       buffer = null;
       throwIfAudioMatchAborted(signal);
-      const windowInfo = audioMatchWindow(audioBuffer, requestedStartSeconds, requestedDurationSeconds, speed);
-      setStatus(`audio match: sampling ${windowInfo.actualStartSeconds.toFixed(2)}s + ${windowInfo.actualDurationSeconds.toFixed(2)}s @ ${speed.toFixed(2)}x`);
 
-      let samples = audioMatchSamples(audioBuffer, windowInfo.actualStartSeconds, windowInfo.actualDurationSeconds);
-      audioBuffer = null;
-      let matchedSamples = stretchSamplesForSpeed(samples, speed);
-      samples = null;
-      const matchDurationSeconds = clamp(matchedSamples.length / 8000, 3, 30);
-      throwIfAudioMatchAborted(signal);
-      const audioFP = await GenerateFP(matchedSamples);
-      matchedSamples = null;
-      throwIfAudioMatchAborted(signal);
-      const data = await fetchJson("/audio/match", {
-        duration: String(matchDurationSeconds),
-        audioFP,
-      });
-      throwIfAudioMatchAborted(signal);
-      const match = bestAudioMatchResult(data);
-      if (!match?.song?.id) {
-        throw new Error(`audio match no result${data?.data?.noMatchReason !== undefined ? ` (${data.data.noMatchReason})` : ""}`);
+      try {
+        const middleWindow = audioMatchWindow(audioBuffer, requestedStartSeconds, requestedDurationSeconds, speed);
+        middleWindow.fraction = 0.5;
+        setStatus(`audio match: sampling ${middleWindow.actualStartSeconds.toFixed(2)}s + ${middleWindow.actualDurationSeconds.toFixed(2)}s @ ${speed.toFixed(2)}x`);
+
+        const results = [];
+        let firstError = null;
+        try {
+          results.push(await audioMatchWindowResult(audioBuffer, middleWindow, speed, signal));
+        } catch (error) {
+          if (String(error.message || "").includes("audio match aborted")) throw error;
+          firstError = error;
+        }
+
+        if (!useMultiWindow) {
+          if (!results.length) throw firstError || new Error("audio match failed");
+          return { ...results[0], decision: "single-window", debugWindows: results, confidence: "1/1" };
+        }
+
+        const titleCandidates = await titleCandidatesPromise;
+        const titleIds = new Set(titleCandidates.slice(0, 3).map((song) => String(song.id)));
+        const middle = results[0];
+        if (middle && titleIds.has(String(middle.song.id)) && !alwaysUseAllWindows) {
+          return {
+            ...middle,
+            decision: "50% confirmed by title top-3",
+            titleCandidateCount: titleCandidates.length,
+            debugWindows: results,
+            confidence: audioMatchConfidence(middle.song.id, results, titleIds, false),
+          };
+        }
+
+        for (const fraction of [0.25, 0.75]) {
+          try {
+            const windowInfo = audioMatchWindowAtFraction(audioBuffer, fraction, middleWindow.targetDurationSeconds, speed);
+            results.push(await audioMatchWindowResult(audioBuffer, windowInfo, speed, signal));
+          } catch (error) {
+            if (String(error.message || "").includes("audio match aborted")) throw error;
+          }
+        }
+
+        const consensus = audioMatchConsensus(results);
+        if (consensus) {
+          return {
+            ...consensus,
+            decision: consensus.decision,
+            titleCandidateCount: titleCandidates.length,
+            debugWindows: results,
+            confidence: audioMatchConfidence(consensus.song.id, results, titleIds, true),
+          };
+        }
+
+        if (results.length) {
+          return {
+            ...results[0],
+            decision: "first valid window fallback",
+            titleCandidateCount: titleCandidates.length,
+            debugWindows: results,
+            confidence: audioMatchConfidence(results[0].song.id, results, titleIds, true),
+          };
+        }
+        throw firstError || new Error("audio match no valid result");
+      } finally {
+        audioBuffer = null;
       }
-
-      const targetSampleStartMs = Math.round(windowInfo.targetStartSeconds * 1000);
-      const matchStartMs = parseNumber(match.startTime, targetSampleStartMs);
-      const effectiveSampleStartMs = targetSampleStartMs;
-      const offsetMs = Math.round(matchStartMs - effectiveSampleStartMs);
-      if (!audioMatchOffsetInRange(offsetMs)) {
-        throw new Error(`audio match offset out of range ${offsetMs}ms`);
-      }
-
-      return {
-        song: match.song,
-        startTimeMs: matchStartMs,
-        sampleStartMs: Math.round(windowInfo.actualStartSeconds * 1000),
-        effectiveSampleStartMs,
-        offsetMs,
-        speed,
-        raw: match,
-      };
     }
 
     async function firstObjectTimeForAlignment(beatmap = {}, payload = {}) {
@@ -1669,6 +2367,182 @@
       setStatus("background: fallback");
     }
 
+    function clearMvBackground() {
+      mvBackgroundAbortController?.abort();
+      mvBackgroundAbortController = null;
+      currentMvBackgroundKey = "";
+      currentMvPlaybackPaused = false;
+      lastMvObservedLiveTime = null;
+      lastMvLiveAdvanceAt = 0;
+      overlayEl?.classList.remove("has-mv-background");
+      if (!mvBackgroundEl) return;
+      mvBackgroundEl.pause();
+      mvBackgroundEl.removeAttribute("src");
+      mvBackgroundEl.load();
+    }
+
+    function updateMvPlaybackState(liveTime) {
+      const now = performance.now();
+      const time = Number(liveTime) || 0;
+      const advanced = lastMvObservedLiveTime === null || Math.abs(time - lastMvObservedLiveTime) > 1;
+
+      if (advanced) {
+        lastMvLiveAdvanceAt = now;
+        currentMvPlaybackPaused = false;
+      } else if (lastMvLiveAdvanceAt && now - lastMvLiveAdvanceAt >= 180) {
+        currentMvPlaybackPaused = true;
+      }
+
+      lastMvObservedLiveTime = time;
+    }
+
+    function syncMvBackground(liveTime = lastLiveTime, force = false) {
+      if (!mvBackgroundEl?.src || !overlayEl?.classList.contains("has-mv-background")) return;
+      if (mvBackgroundEl.readyState < HTMLMediaElement.HAVE_METADATA) return;
+
+      const rawTarget = Math.max(0, Number(liveTime) || 0) / 1000;
+      const duration = Number(mvBackgroundEl.duration) || 0;
+      const target = duration > 0 ? rawTarget % duration : rawTarget;
+
+      try {
+        if (currentMvPlaybackPaused) {
+          if (force || Math.abs(mvBackgroundEl.currentTime - target) > 0.03) {
+            mvBackgroundEl.currentTime = target;
+          }
+          if (!mvBackgroundEl.paused) mvBackgroundEl.pause();
+          return;
+        }
+        if (force || Math.abs(mvBackgroundEl.currentTime - target) > 0.35) {
+          mvBackgroundEl.currentTime = target;
+        }
+        if (mvBackgroundEl.paused) mvBackgroundEl.play().catch(() => {});
+      } catch {
+        // Some media implementations reject seeks while replacing a source.
+      }
+    }
+
+    async function fetchMvForSong(songId, resolution) {
+      try {
+        return await fetchJson("/mv/for-song", {
+          id: String(songId),
+          r: String(resolution),
+        });
+      } catch {
+        // api-enhanced exposes the same lookup as two public MV endpoints.
+        const detail = await fetchJson("/song/detail", { ids: String(songId) });
+        const song = detail?.songs?.[0];
+        const mvId = Number(song?.mv || song?.mvid || 0);
+        if (!mvId) return { hasMv: false, songId: Number(songId) };
+
+        const urlData = await fetchJson("/mv/url", {
+          id: String(mvId),
+          r: String(resolution),
+        });
+        return {
+          hasMv: Boolean(urlData?.data?.url),
+          songId: Number(songId),
+          mvId,
+          url: urlData?.data?.url || "",
+          r: Number(urlData?.data?.r || resolution),
+        };
+      }
+    }
+
+    async function fetchBilibiliMvBackground(songMeta, resolution, neteaseData = null) {
+      if (!CONFIG.bilibiliBackgroundEnabled) return null;
+
+      const durationMs = parseNumber(songMeta.durationMs, 0) || parseNumber(neteaseData?.durationMs, 0);
+      const bilibili = await fetchJson("/bilibili/background", {
+        title: String(songMeta.title || ""),
+        artist: CONFIG.bilibiliSearchWithoutArtist ? "" : String(songMeta.artist || ""),
+        durationMs: String(durationMs),
+        r: String(resolution),
+        maxDeviationPercent: String(clamp(Number(CONFIG.bilibiliMaxDurationDeviationPercent), 1, 30)),
+      });
+      if (!bilibili?.found || !bilibili?.mediaUrl) return null;
+
+      return {
+        url: bilibili.mediaUrl,
+        source: `Bilibili ${bilibili.bvid || ""}`,
+      };
+    }
+
+    async function updateMvBackground(songId, songMeta = {}, trackKey = currentTrackKey) {
+      if (!CONFIG.mvBackgroundEnabled || !songId || !trackKey) {
+        clearMvBackground();
+        return;
+      }
+
+      const key = `${trackKey}:${songId}:${Math.round(clamp(Number(CONFIG.mvBackgroundResolution), 240, 1080))}:${CONFIG.mvBackgroundSourcePriority}:${CONFIG.bilibiliBackgroundEnabled}`;
+      if (key === currentMvBackgroundKey) return;
+
+      mvBackgroundAbortController?.abort();
+      const controller = new AbortController();
+      mvBackgroundAbortController = controller;
+      currentMvBackgroundKey = key;
+
+      try {
+        const resolution = Math.round(clamp(Number(CONFIG.mvBackgroundResolution), 240, 1080));
+        let neteaseData = null;
+        let selected = null;
+        const sources = CONFIG.mvBackgroundSourcePriority === "bilibili" && CONFIG.bilibiliBackgroundEnabled
+          ? ["bilibili", "netease"]
+          : ["netease", "bilibili"];
+
+        for (const source of sources) {
+          if (controller.signal.aborted || currentTrackKey !== trackKey || currentMvBackgroundKey !== key) return;
+          if (source === "netease") {
+            neteaseData ||= await fetchMvForSong(songId, resolution);
+            if (neteaseData?.hasMv && neteaseData?.url) {
+              selected = { url: neteaseData.url, source: `netease MV ${neteaseData.mvId || ""}` };
+            }
+          } else if (CONFIG.bilibiliBackgroundEnabled) {
+            if (!parseNumber(songMeta.durationMs, 0) && !neteaseData) {
+              neteaseData = await fetchMvForSong(songId, resolution);
+            }
+            selected = await fetchBilibiliMvBackground(songMeta, resolution, neteaseData);
+          }
+          if (selected) break;
+        }
+
+        if (controller.signal.aborted || currentTrackKey !== trackKey || currentMvBackgroundKey !== key) return;
+        const videoUrl = selected?.url || "";
+        const videoSource = selected?.source || "";
+
+        if (!videoUrl) {
+          clearMvBackground();
+          return;
+        }
+
+        mvBackgroundEl.pause();
+        mvBackgroundEl.onloadedmetadata = () => syncMvBackground(lastLiveTime, true);
+        mvBackgroundEl.src = videoUrl;
+        mvBackgroundEl.load();
+        overlayEl?.classList.add("has-mv-background");
+        syncMvBackground(lastLiveTime, true);
+        try {
+          await mvBackgroundEl.play();
+        } catch {
+          // The muted video can still be blocked by a damaged media response.
+        }
+        setStatus(`mv background: ${videoSource || "loaded"}`);
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        clearMvBackground();
+        setStatus(`mv background unavailable: ${error.message}`);
+      }
+    }
+
+    function refreshMvBackgroundForCurrentTrack() {
+      if (!CONFIG.mvBackgroundEnabled) {
+        clearMvBackground();
+        return;
+      }
+      if (currentNeteaseSongId && currentTrackKey) {
+        updateMvBackground(currentNeteaseSongId, currentNeteaseSongMeta, currentTrackKey);
+      }
+    }
+
     function parseLrc(lrc) {
       const lines = [];
 
@@ -1693,6 +2567,55 @@
       }
 
       return lines.sort((a, b) => a.time - b.time);
+    }
+
+    function parseYrc(yrc) {
+      const lines = [];
+
+      for (const rawLine of String(yrc || "").split(/\r?\n/)) {
+        const lineTag = rawLine.match(/\[(\d+),(\d+)]/);
+        if (!lineTag) continue;
+
+        const text = rawLine
+          .replace(/\[\d+,\d+]/g, "")
+          .replace(/\(\d+,\d+(?:,\d+)?\)/g, "")
+          .trim();
+        if (!text) continue;
+
+        const words = [];
+        const wordMatcher = /\((\d+),(\d+)(?:,\d+)?\)([^()]*)/g;
+        for (const match of rawLine.matchAll(wordMatcher)) {
+          const wordText = match[3];
+          if (!wordText) continue;
+          words.push({
+            time: Number(match[1]),
+            duration: Number(match[2]),
+            text: wordText,
+          });
+        }
+
+        lines.push({
+          time: Number(lineTag[1]),
+          duration: Number(lineTag[2]),
+          text,
+          words,
+        });
+      }
+
+      return lines.sort((a, b) => a.time - b.time);
+    }
+
+    function parseNeteaseLyricData(data) {
+      const lrcLines = parseLrc(data.lrc?.lyric || "");
+      const yrcLines = parseYrc(data.yrc?.lyric || "");
+      const lines = yrcLines.length ? yrcLines : lrcLines;
+      const translationLines = parseLrc(data.tlyric?.lyric || data.ytlrc?.lyric || "");
+
+      return {
+        lines,
+        translations: translationLines,
+        lyricFormat: yrcLines.length ? "yrc" : (lrcLines.length ? "lrc" : ""),
+      };
     }
 
     function findLineIndex(lines, time) {
@@ -1736,12 +2659,13 @@
     function parseSpeedMultiplier(version) {
       const text = safeText(version);
       const matches = [
-        ...text.matchAll(/(?:^|[^\d])(\d+(?:\.\d+)?)\s*x(?:$|[^\d])/gi),
-        ...text.matchAll(/(?:^|[^\d])x\s*(\d+(?:\.\d+)?)(?:$|[^\d])/gi),
+        ...text.matchAll(/(?:^|[^\d])(\d+(?:[\.,]\d+)?)\s*x(?:$|[^\d])/gi),
+        ...text.matchAll(/(?:^|[^\d])x\s*(\d+(?:[\.,]\d+)?)(?:$|[^\d])/gi),
+        ...text.matchAll(/(?:^|[^\d])((?:1|2)[\.,]\d+)(?:$|[^\d])/gi),
       ];
 
       for (const match of matches) {
-        const value = Number(match[1]);
+        const value = Number(String(match[1]).replace(",", "."));
         if (value >= 0.5 && value <= 2.5) return value;
       }
 
@@ -1788,7 +2712,9 @@
       if (!window.LyricAlignment?.estimateOffset) return result;
 
       const firstObjectTime = await firstObjectTimeForAlignment(beatmap, payload);
-      const speed = parseNumber(result.speedMultiplier, 1) * parseSpeedMultiplier(beatmap.version);
+      const speed = parseNumber(result.speedMultiplier, 1)
+        * parseSpeedMultiplier(beatmap.version)
+        * bpmDifficultyMultiplier(beatmap, result.neteaseBpm);
       const estimate = window.LyricAlignment.estimateOffset({
         lyricLines: result.lines,
         firstObjectTime,
@@ -1843,12 +2769,217 @@
     function renderContext(container, lines) {
       container.textContent = "";
 
-      for (const text of lines) {
+      for (const lineData of lines) {
         const line = document.createElement("div");
         line.className = "line context-line";
-        line.textContent = text;
+        line.dataset.lyricKey = lineData.key;
+        line.textContent = lineData.text;
         container.appendChild(line);
       }
+    }
+
+    function setCurrentLine(lineData) {
+      currentLineEl.dataset.lyricKey = lineData.key;
+      currentLineEl.dataset.lyricText = lineData.text;
+      currentLineEl.textContent = "";
+      currentLyricProgressUnits = [];
+      lastLyricProgressRenderAt = 0;
+
+      if (!CONFIG.lyricProgressEnabled) {
+        currentLineEl.textContent = lineData.text;
+        return;
+      }
+
+      const timedWords = Array.isArray(lineData.words) ? lineData.words.filter((word) => word?.text) : [];
+      const wordText = timedWords.map((word) => word.text).join("");
+      const units = timedWords.length && wordText === lineData.text
+        ? timedWords.map((word) => ({ text: word.text, time: word.time, duration: word.duration }))
+        : Array.from(lineData.text || "").map((text) => ({ text }));
+
+      for (const unit of units) {
+        const element = document.createElement("span");
+        element.className = "lyric-progress-unit";
+        element.textContent = unit.text;
+        currentLineEl.appendChild(element);
+        currentLyricProgressUnits.push({ ...unit, element });
+      }
+    }
+
+    function lyricProgressForLine(line, nextLine, time) {
+      if (!line) return 0;
+
+      if (Array.isArray(line.words) && line.words.length) {
+        const totalUnits = line.words.reduce((sum, word) => sum + Math.max(1, Array.from(word.text || "").length), 0);
+        let completedUnits = 0;
+        for (const word of line.words) {
+          const units = Math.max(1, Array.from(word.text || "").length);
+          const start = Number(word.time) || line.time;
+          const duration = Math.max(1, Number(word.duration) || 1);
+          if (time >= start + duration) {
+            completedUnits += units;
+          } else if (time > start) {
+            completedUnits += units * clamp((time - start) / duration, 0, 1);
+            break;
+          } else {
+            break;
+          }
+        }
+        return clamp(completedUnits / Math.max(1, totalUnits), 0, 1);
+      }
+
+      const start = Number(line.time) || 0;
+      const end = Number(nextLine?.time) || (start + Math.max(750, Number(line.duration) || 3500));
+      return clamp((time - start) / Math.max(1, end - start), 0, 1);
+    }
+
+    function updateCurrentLineProgress(line, nextLine, time) {
+      if (!CONFIG.lyricProgressEnabled || !line || currentLineEl.dataset.lyricKey === undefined) return;
+      const units = currentLyricProgressUnits;
+      if (!units.length) return;
+
+      const now = performance.now();
+      if (now - lastLyricProgressRenderAt < 33) return;
+      lastLyricProgressRenderAt = now;
+
+      const dimOpacity = clamp(Number(CONFIG.lyricProgressUnplayedOpacity), 0.12, 0.9);
+      const applyUnitProgress = (unit, progress) => {
+        const stepped = Math.round(clamp(progress, 0, 1) * 24) / 24;
+        if (unit.progressStep === stepped) return;
+        unit.progressStep = stepped;
+        const opacity = dimOpacity + (1 - dimOpacity) * stepped;
+        unit.element.style.color = `rgba(255, 255, 255, ${opacity.toFixed(3)})`;
+      };
+
+      const hasWordTiming = units.every((unit) => Number.isFinite(Number(unit.time)) && Number(unit.duration) >= 0);
+      if (hasWordTiming) {
+        for (const unit of units) {
+          const start = Number(unit.time);
+          const duration = Math.max(1, Number(unit.duration));
+          applyUnitProgress(unit, (time - start) / duration);
+        }
+        return;
+      }
+
+      const lineProgress = lyricProgressForLine(line, nextLine, time);
+      const completedUnits = lineProgress * units.length;
+      for (let index = 0; index < units.length; index += 1) {
+        applyUnitProgress(units[index], completedUnits - index);
+      }
+    }
+
+    function applyLyricDom({ before, current, timeText, translation, after }) {
+      renderContext(beforeLinesEl, before);
+      setCurrentLine(current);
+      currentTimeEl.textContent = timeText;
+      translationEl.textContent = translation;
+      renderContext(afterLinesEl, after);
+    }
+
+    function captureLyricRects() {
+      const rects = new Map();
+      if (!lyricsEl) return rects;
+
+      for (const element of lyricsEl.querySelectorAll(".line[data-lyric-key]")) {
+        const style = getComputedStyle(element);
+        rects.set(element.dataset.lyricKey, {
+          rect: element.getBoundingClientRect(),
+          className: element.className,
+          text: element.dataset.lyricText || element.textContent || "",
+          style: {
+            color: style.color,
+            opacity: style.opacity,
+          },
+        });
+      }
+
+      return rects;
+    }
+
+    function animateLyricRoll(previousRects) {
+      if (!lyricsEl || typeof Element === "undefined") return;
+
+      const duration = 280;
+      const easing = "cubic-bezier(.2,.75,.18,1)";
+      const nextKeys = new Set();
+
+      for (const element of lyricsEl.querySelectorAll(".line[data-lyric-key]")) {
+        const key = element.dataset.lyricKey;
+        nextKeys.add(key);
+        const previous = previousRects.get(key);
+        const next = element.getBoundingClientRect();
+        const nextStyle = getComputedStyle(element);
+
+        if (previous && typeof element.animate === "function") {
+          const dx = previous.rect.left - next.left;
+          const dy = previous.rect.top - next.top;
+          element.animate([
+            {
+              transform: `translate(${dx}px, ${dy}px)`,
+              opacity: previous.style.opacity || 0.78,
+              color: previous.style.color,
+            },
+            {
+              transform: "translate(0, 0)",
+              opacity: nextStyle.opacity || 1,
+              color: nextStyle.color,
+            },
+          ], { duration, easing });
+        } else if (typeof element.animate === "function") {
+          element.animate([
+            { transform: "translateY(18px)", opacity: 0 },
+            { transform: "translateY(0)", opacity: nextStyle.opacity || 1 },
+          ], { duration, easing });
+        }
+      }
+
+      const lyricsRect = lyricsEl.getBoundingClientRect();
+      for (const [key, previous] of previousRects.entries()) {
+        if (nextKeys.has(key)) continue;
+
+        const ghost = document.createElement("div");
+        ghost.className = `${previous.className} line-ghost`;
+        ghost.textContent = previous.text;
+        ghost.style.left = `${previous.rect.left - lyricsRect.left}px`;
+        ghost.style.top = `${previous.rect.top - lyricsRect.top}px`;
+        ghost.style.width = `${previous.rect.width}px`;
+        lyricsEl.appendChild(ghost);
+
+        if (typeof ghost.animate === "function") {
+          const animation = ghost.animate([
+            { transform: "translateY(0)", opacity: getComputedStyle(ghost).opacity || 0.78 },
+            { transform: "translateY(-18px)", opacity: 0 },
+          ], { duration, easing });
+          animation.onfinish = () => ghost.remove();
+        } else {
+          ghost.remove();
+        }
+      }
+    }
+
+    function updateLyricDom(view) {
+      clearTimeout(lyricTransitionTimer);
+      const mode = String(CONFIG.lyricTransitionMode || "roll").toLowerCase();
+
+      if (mode === "off" || mode === "none" || !lyricsEl) {
+        lyricsEl?.classList.remove("is-transitioning");
+        applyLyricDom(view);
+        return;
+      }
+
+      if (mode === "roll" || mode === "slide") {
+        lyricsEl.classList.remove("is-transitioning");
+        const previousRects = captureLyricRects();
+        applyLyricDom(view);
+        requestAnimationFrame(() => animateLyricRoll(previousRects));
+        return;
+      }
+
+      lyricsEl.classList.add("is-transitioning");
+
+      lyricTransitionTimer = setTimeout(() => {
+        applyLyricDom(view);
+        requestAnimationFrame(() => lyricsEl.classList.remove("is-transitioning"));
+      }, 90);
     }
 
     function renderLyrics(time) {
@@ -1858,8 +2989,11 @@
       const adjustedTime = effectiveLyricTime(time);
       const index = findLineIndex(lyricLines, adjustedTime);
       const currentIndex = Math.max(0, index);
+      const currentLine = lyricLines[currentIndex];
+      const nextLine = lyricLines[currentIndex + 1];
       if (currentIndex === lastRenderedLyricIndex) {
         currentTimeEl.textContent = formatTime(lyricLines[currentIndex]?.time || adjustedTime);
+        updateCurrentLineProgress(currentLine, nextLine, adjustedTime);
         return;
       }
 
@@ -1867,14 +3001,26 @@
       const beforeCount = clamp(Number(CONFIG.contextBefore), 0, 8);
       const afterCount = clamp(Number(CONFIG.contextAfter), 0, 8);
       const beforeStart = Math.max(0, currentIndex - beforeCount);
-      const before = lyricLines.slice(beforeStart, currentIndex).map((line) => line.text);
-      const after = lyricLines.slice(currentIndex + 1, currentIndex + 1 + afterCount).map((line) => line.text);
+      const toViewLine = (line, lineIndex) => ({
+        key: `${line.time}|${lineIndex}|${line.text}`,
+        text: line.text,
+        words: line.words || [],
+      });
+      const before = lyricLines
+        .slice(beforeStart, currentIndex)
+        .map((line, index) => toViewLine(line, beforeStart + index));
+      const after = lyricLines
+        .slice(currentIndex + 1, currentIndex + 1 + afterCount)
+        .map((line, index) => toViewLine(line, currentIndex + 1 + index));
 
-      renderContext(beforeLinesEl, before);
-      currentLineEl.textContent = lyricLines[currentIndex]?.text || "";
-      currentTimeEl.textContent = formatTime(lyricLines[currentIndex]?.time || adjustedTime);
-      translationEl.textContent = pickTranslation(adjustedTime);
-      renderContext(afterLinesEl, after);
+      updateLyricDom({
+        before,
+        current: toViewLine(currentLine || { time: adjustedTime, text: "" }, currentIndex),
+        timeText: formatTime(lyricLines[currentIndex]?.time || adjustedTime),
+        translation: pickTranslation(adjustedTime),
+        after,
+      });
+      updateCurrentLineProgress(currentLine, nextLine, adjustedTime);
     }
 
     function scoreSong(song, title, artist) {
@@ -2004,19 +3150,33 @@
     }
 
     async function loadLyricsBySongId(songId, source, offset = 0, speed = 1) {
-      const data = await fetchJson("/lyric", { id: String(songId) });
+      let parsed = { lines: [], translations: [], lyricFormat: "" };
+
+      try {
+        const data = await fetchJson("/lyric/new", { id: String(songId) });
+        parsed = parseNeteaseLyricData(data);
+      } catch {
+        // Older API deployments may not expose the enhanced lyric endpoint.
+      }
+
+      if (!parsed.lines.length) {
+        const data = await fetchJson("/lyric", { id: String(songId) });
+        parsed = parseNeteaseLyricData(data);
+      }
+
       return {
         neteaseSongId: songId,
-        lines: parseLrc(data.lrc?.lyric || ""),
-        translations: parseLrc(data.tlyric?.lyric || ""),
+        lines: parsed.lines,
+        translations: parsed.translations,
         source,
+        lyricFormat: parsed.lyricFormat,
         lyricOffsetMs: offset,
         speedMultiplier: speed,
       };
     }
 
-    async function loadLyricsByAudioMatch(title, artist, beatmap) {
-      const match = await audioMatchCurrentBeatmap(beatmap);
+    async function loadLyricsByAudioMatch(title, artist, beatmap, options = {}) {
+      const match = await audioMatchCurrentBeatmap(beatmap, { title, artist }, options);
       const song = match.song;
       const result = await loadLyricsBySongId(
         song.id,
@@ -2025,17 +3185,40 @@
         1
       );
 
-      result.title = title;
-      result.artist = artist;
+      result.neteaseSongTitle = song.name || title;
+      result.neteaseSongArtist = (song.artists || song.ar || []).map((item) => item?.name).filter(Boolean).join("/") || artist;
+      result.neteaseDurationMs = parseNumber(song.dt || song.duration || song.durationMs, 0);
+      result.neteaseBpm = neteaseSongBpm(song);
       result.audioMatchSource = "netease audio match";
       result.audioMatchStartTimeMs = match.startTimeMs;
       result.audioMatchSampleStartMs = match.sampleStartMs;
       result.audioMatchEffectiveSampleStartMs = match.effectiveSampleStartMs;
       result.audioMatchSpeed = match.speed;
+      result.audioMatchDebug = formatAudioMatchDebug(match.debugWindows || [match], match.decision || "selected");
+      result.audioMatchConfidence = match.confidence || "";
       result.autoOffsetMs = match.offsetMs;
       result.autoOffsetSource = "netease audio match";
-      writeSongCacheIndex(title, artist, beatmap, result);
       return result;
+    }
+
+    async function bpmAudioMatchContext(title, artist, beatmap) {
+      const taggedBpm = difficultyBpmTag(beatmap.version);
+      if (!CONFIG.bpmTagAudioMatchEnabled || isPackBeatmap(beatmap) || !taggedBpm) return null;
+
+      try {
+        const candidates = await searchNeteaseSongs(title, artist);
+        for (const song of candidates) {
+          const sourceBpm = neteaseSongBpm(song);
+          const rawMultiplier = sourceBpm ? taggedBpm / sourceBpm : 0;
+          const multiplier = bpmDifficultyMultiplier(beatmap, sourceBpm);
+          if (rawMultiplier >= 0.5 && rawMultiplier <= 2.5 && Math.abs(multiplier - 1) >= 0.01) {
+            return { titleCandidates: candidates, difficultySpeedMultiplier: multiplier, taggedBpm, sourceBpm };
+          }
+        }
+      } catch {
+        // BPM tags are optional acceleration hints; keep the normal path intact.
+      }
+      return null;
     }
 
     async function loadLyricsByMetadata(title, artist, beatmap, payload = {}) {
@@ -2048,47 +3231,68 @@
         const cacheOffset = cacheLyricOffset(cachedSong);
         const cacheSpeed = speed;
         let result = await loadLyricsBySongId(cachedSongId, `song cache ${cachedSongId}`, cacheOffset, cacheSpeed);
+        result.neteaseSongTitle = cachedSong?.title || title;
+        result.neteaseSongArtist = cachedSong?.artist || artist;
+        result.neteaseDurationMs = parseNumber(cachedSong?.neteaseDurationMs, 0);
+        result.neteaseBpm = parseNumber(cachedSong?.neteaseBpm, 0);
+        result.audioMatchSource = cachedSong?.audioMatchSource || "";
+        result.audioMatchConfidence = cachedSong?.audioMatchConfidence || "";
         result = await applyAutoOffset(result, beatmap, payload, cachedSong);
-        if (parseNumber(result.autoOffsetMs, 0) !== 0) writeSongCacheIndex(title, artist, beatmap, result);
 
         return result;
       }
 
       let result = await loadNeteaseLyrics(title, artist);
       result = await applyAutoOffset(result, beatmap, payload, cachedSong);
-      writeSongCacheIndex(title, artist, beatmap, result);
       return result;
     }
 
     async function loadLyricsForTrack(title, artist, beatmap, payload = {}) {
+      const bpmContext = CONFIG.audioMatchEnabled ? await bpmAudioMatchContext(title, artist, beatmap) : null;
       if (CONFIG.audioMatchEnabled) {
         try {
-          return await loadLyricsByAudioMatch(title, artist, beatmap);
+          const result = await loadLyricsByAudioMatch(title, artist, beatmap, bpmContext || {});
+          if (result.lines.length) return result;
+
+          return {
+            ...result,
+            instrumental: true,
+            reason: `${result.source || `audio match ${result.neteaseSongId || ""}`} has no synced LRC/YRC`,
+          };
         } catch (error) {
           if (String(error.message || "").includes("audio match aborted")) throw error;
-          setStatus(`audio match fallback: ${error.message}`);
+          setStatus(`audio match failed, fallback to title search: ${error.message}`);
         }
       }
 
-      return loadLyricsByMetadata(title, artist, beatmap, payload);
+      const metadataResult = await loadLyricsByMetadata(title, artist, beatmap, payload);
+      if (!metadataResult.neteaseSongId && !metadataResult.lines.length) {
+        metadataResult.audioMatchConfidence = "0/4";
+      }
+      return metadataResult;
     }
 
     async function loadNeteaseLyrics(title, artist) {
       const songs = await searchNeteaseSongs(title, artist);
       if (!songs.length) {
-        return { lines: [], translations: [], source: "" };
+        return { lines: [], translations: [], source: "", reason: "no NetEase candidates found" };
       }
 
       let bestEmpty = null;
 
       for (const song of songs.slice(0, Math.max(1, CONFIG.searchLimit))) {
         try {
-          const data = await fetchJson("/lyric", { id: String(song.id) });
+          const loaded = await loadLyricsBySongId(song.id, `${song.name} - ${(song.artists || song.ar || []).map((item) => item.name).join("/")}`);
           const result = {
             neteaseSongId: song.id,
-            lines: parseLrc(data.lrc?.lyric || ""),
-            translations: parseLrc(data.tlyric?.lyric || ""),
-            source: `${song.name} - ${(song.artists || song.ar || []).map((item) => item.name).join("/")}`,
+            neteaseSongTitle: song.name || title,
+            neteaseSongArtist: (song.artists || song.ar || []).map((item) => item?.name).filter(Boolean).join("/") || artist,
+            neteaseDurationMs: parseNumber(song.dt || song.duration || song.durationMs, 0),
+            neteaseBpm: neteaseSongBpm(song),
+            lines: loaded.lines,
+            translations: loaded.translations,
+            source: loaded.source,
+            lyricFormat: loaded.lyricFormat,
           };
 
           if (result.lines.length) {
@@ -2101,7 +3305,12 @@
         }
       }
 
-      return bestEmpty || { lines: [], translations: [], source: "" };
+      if (bestEmpty) {
+        bestEmpty.reason = `candidate has no synced LRC: ${bestEmpty.source || bestEmpty.neteaseSongId || "unknown"}`;
+        return bestEmpty;
+      }
+
+      return { lines: [], translations: [], source: "", reason: "no synced LRC returned by candidates" };
     }
 
     async function refreshTrack(payload) {
@@ -2115,8 +3324,7 @@
       } = trackInfoFromPayload(payload);
 
       updateTimelineDuration(beatmap, payload);
-      titleEl.textContent = rawTitle || "Unknown title";
-      artistEl.textContent = rawArtist || "Unknown artist";
+      updateSongHeader(rawTitle, rawArtist);
 
       updateBeatmapColor(beatmap, payload).catch(() => {
         const fallback = hexToRgb(CONFIG.panelColor);
@@ -2125,6 +3333,8 @@
       });
 
       if (!rawTitle) {
+        currentAudioMatchConfidence = null;
+        setAudioMatchState("idle");
         if (currentTrackKey || pendingTrackKey || lyricLines.length) {
           currentTrackKey = "";
           lastSeenTrackKey = "";
@@ -2133,10 +3343,13 @@
           pendingTrackSince = 0;
           currentDuration = 0;
           audioMatchAbortController?.abort();
+          currentNeteaseSongId = "";
+          currentNeteaseSongMeta = { title: "", artist: "", durationMs: 0 };
+          clearMvBackground();
           clearTimeout(pendingTrackTimer);
           lyricLoadToken += 1;
-          clearDisplayedLyrics("");
-          setStatus("waiting for beatmap");
+          clearDisplayedLyrics("Waiting for beatmap data");
+          setStatus("waiting for beatmap data from tosu");
         }
         return;
       }
@@ -2151,11 +3364,16 @@
         pendingTrackKey = key;
         pendingTrackPayload = payload;
         pendingTrackSince = Date.now();
+        currentAudioMatchConfidence = null;
+        setAudioMatchState(CONFIG.audioMatchEnabled ? "matching" : "disabled");
         updateTimelineDuration(beatmap, payload, true);
         clearTimeout(pendingTrackTimer);
         lyricLoadToken += 1;
-        clearDisplayedLyrics("Searching lyrics", { keepTrackState: loadingLyricsTrackKey === key || loadedLyricsTrackKey === key });
-        setStatus(`pending: ${searchArtist ? `${searchArtist} - ` : ""}${searchTitle}`);
+        currentNeteaseSongId = "";
+        currentNeteaseSongMeta = { title: "", artist: "", durationMs: 0 };
+        clearMvBackground();
+        clearDisplayedLyrics("Preparing lyrics search");
+        setStatus(`beatmap changed, waiting for stable data: ${searchArtist ? `${searchArtist} - ` : ""}${searchTitle}`);
         pendingTrackTimer = setTimeout(() => {
           if (pendingTrackKey === key) {
             refreshTrack(pendingTrackPayload || payload).catch((error) => {
@@ -2177,42 +3395,75 @@
       currentTrackKey = key;
 
       const token = ++lyricLoadToken;
-      currentSpeedMultiplier = parseSpeedMultiplier(beatmap.version);
+        currentSpeedMultiplier = parseSpeedMultiplier(beatmap.version);
       loadingLyricsTrackKey = key;
-      clearDisplayedLyrics("Searching lyrics", { keepTrackState: true });
+      clearDisplayedLyrics("Searching lyrics");
+      loadingLyricsTrackKey = key;
       updateTimelineDuration(beatmap, payload);
-      setStatus(`searching: ${searchArtist ? `${searchArtist} - ` : ""}${searchTitle}`);
+      setStatus(`searching lyrics: ${searchArtist ? `${searchArtist} - ` : ""}${searchTitle}`);
 
       try {
-        const result = await loadLyricsForTrack(searchTitle, searchArtist, beatmap, payload);
+        const reusedResult = sameSongSetResult(beatmap);
+        const result = reusedResult || await loadLyricsForTrack(searchTitle, searchArtist, beatmap, payload);
         if (token !== lyricLoadToken) return;
+        if (currentTrackKey !== key || trackInfoFromPayload(latestTrackPayload || {}).key !== key) return;
+        if (result.neteaseSongId && result.lines?.length) {
+          writeSongCacheIndex(searchTitle, searchArtist, beatmap, result);
+        }
+        if (!reusedResult) rememberSameSongSetResult(beatmap, result);
 
         loadingLyricsTrackKey = "";
+        currentNeteaseSongId = String(result.neteaseSongId || "");
+        currentNeteaseSongMeta = {
+          title: result.neteaseSongTitle || searchTitle,
+          artist: result.neteaseSongArtist || searchArtist,
+          durationMs: parseNumber(result.neteaseDurationMs, 0),
+        };
         lyricLines = result.lines;
         translatedLines = result.translations;
         loadedLyricsTrackKey = key;
+        currentSpeedMultiplier *= bpmDifficultyMultiplier(beatmap, result.neteaseBpm);
         currentSpeedMultiplier *= parseNumber(result.speedMultiplier, 1);
         currentTrackOffsetMs = parseNumber(result.lyricOffsetMs, 0);
         currentAutoOffsetSource = result.autoOffsetSource || "";
         updateOffsetBadge();
+        currentAudioMatchConfidence = result.audioMatchConfidence || null;
+        setAudioMatchState(result.audioMatchSource || result.audioMatchSucceeded
+          ? "success"
+          : (CONFIG.audioMatchEnabled ? "fallback" : "disabled"));
 
         if (lyricLines.length) {
           currentLineEl.textContent = "Lyrics ready";
-          setStatus(`lyrics: ${result.source || "loaded"} | offset ${formatSignedMs(CONFIG.lyricOffsetMs + currentTrackOffsetMs)}`);
+          setStatus([
+            `lyrics: ${result.source || "loaded"}`,
+            result.audioMatchDebug || "",
+          ].filter(Boolean).join("; "));
           lastRenderedLyricIndex = -2;
           renderLyrics(lastLiveTime);
         } else {
-          currentLineEl.textContent = "No synced lyrics found";
-          setStatus("lyrics: no synced lrc found");
+          currentLineEl.textContent = result.instrumental ? "纯音乐，请欣赏" : "No synced lyrics found";
+          setStatus(result.instrumental
+            ? [
+              `instrumental: ${result.source || "audio match found no timed lyrics"}`,
+              result.audioMatchDebug || "",
+            ].filter(Boolean).join("; ")
+            : [
+              `no synced lyrics: ${result.reason || result.source || "song found, but no timed LRC was returned"}`,
+              result.audioMatchDebug || "",
+            ].filter(Boolean).join("; "));
           lastRenderedLyricIndex = -2;
         }
+
+        // Background lookup is deliberately outside the lyric transaction.
+        // A third-party video failure must never delay or replace lyrics.
+        void updateMvBackground(currentNeteaseSongId, currentNeteaseSongMeta, key);
       } catch (error) {
         if (token !== lyricLoadToken) return;
 
         loadingLyricsTrackKey = "";
         clearDisplayedLyrics("Lyrics service unavailable");
         currentLineEl.textContent = "Lyrics service unavailable";
-        setStatus(`lyrics api error: ${error.message}`);
+        setStatus(`lyrics API unavailable: ${error.message}`);
       }
     }
 
@@ -2226,7 +3477,7 @@
         // The old socket may already be closed.
       }
 
-      const socket = new WebSocket(`${CONFIG.tosuWebSocket}?l=${getCounterPath()}`);
+      const socket = new WebSocket(`${CONFIG.tosuWebSocket}?l=${getCounterPathForQuery()}`);
       tosuSocket = socket;
 
       socket.addEventListener("open", () => {
@@ -2239,7 +3490,6 @@
 
         try {
           const data = JSON.parse(event.data);
-          applySettingsFromAnyPayload(data, { silent: true });
           latestTrackPayload = data;
           const info = trackInfoFromPayload(data);
           const beatmap = info.beatmap;
@@ -2266,12 +3516,14 @@
 
           lastSeenLiveTime = incomingLiveTime;
           lastLiveTime = Number(beatmap.time?.live || 0);
+          updateMvPlaybackState(lastLiveTime);
           updateTimelineDuration(beatmap, data);
 
           refreshTrack(data).catch((error) => {
             setStatus(`track refresh error: ${error.message}`);
           });
           renderTimeline(lastLiveTime);
+          syncMvBackground(lastLiveTime);
           renderLyrics(lastLiveTime);
         } catch (error) {
           setStatus(`tosu data error: ${error.message}`);
@@ -2280,7 +3532,7 @@
 
       socket.addEventListener("close", () => {
         if (connectionId !== tosuConnectionId) return;
-        setStatus("tosu websocket: reconnecting");
+        setStatus("tosu websocket: reconnecting (cannot receive beatmap/time data)");
         clearTimeout(tosuReconnectTimer);
         tosuReconnectTimer = setTimeout(connectTosu, CONFIG.retryDelayMs);
       });
@@ -2291,9 +3543,30 @@
       });
     }
 
+    function sendSettingsCommand(name = "getSettings", command = getCounterPathForCommand(), retries = 1) {
+      if (!settingsSocket || settingsSocket.readyState !== WebSocket.OPEN) {
+        if (retries <= 6) {
+          setTimeout(() => sendSettingsCommand(name, command, retries + 1), 120);
+        }
+        return;
+      }
+
+      try {
+        const payload = typeof command === "object" ? JSON.stringify(command) : command;
+        settingsSocket.send(`${name}:${payload}`);
+      } catch (error) {
+        if (retries <= 6) {
+          setTimeout(() => sendSettingsCommand(name, command, retries + 1), 300);
+          return;
+        }
+
+        console.info("settings command failed", error);
+      }
+    }
+
     function connectSettings() {
       clearTimeout(settingsReconnectTimer);
-      clearInterval(settingsPollTimer);
+      clearInterval(settingsLiveSyncTimer);
       const connectionId = ++settingsConnectionId;
 
       try {
@@ -2303,7 +3576,7 @@
       }
 
       try {
-        settingsSocket = new WebSocket(`ws://127.0.0.1:24050/websocket/commands?l=${getCounterPath()}`);
+        settingsSocket = new WebSocket(`ws://127.0.0.1:24050/websocket/commands?l=${getCounterPathForQuery()}`);
       } catch {
         return;
       }
@@ -2311,9 +3584,11 @@
       settingsSocket.addEventListener("open", () => {
         if (connectionId !== settingsConnectionId) return;
 
-        clearInterval(settingsPollTimer);
-        requestSettingsSnapshot();
-        settingsPollTimer = setInterval(requestSettingsSnapshot, 2000);
+        sendSettingsCommand("getSettings", getCounterPathForCommand());
+        settingsLiveSyncTimer = setInterval(() => {
+          if (connectionId !== settingsConnectionId) return;
+          sendSettingsCommand("getSettings", getCounterPathForCommand());
+        }, 1000);
       });
 
       settingsSocket.addEventListener("message", (event) => {
@@ -2321,29 +3596,48 @@
 
         try {
           const payload = JSON.parse(event.data);
+          if (payload?.error || payload?.message?.error) return;
+
           const command = payload.command || payload.event || payload.type;
+          const commandName = String(command || "").toLowerCase();
+          let source = null;
 
           if (Array.isArray(payload)) {
-            applySettings(payload);
+            source = payload;
           } else if (command === "getSettings") {
-            applySettings(payload.message || payload.settings || payload.data || payload);
-          } else if (!command || String(command).toLowerCase().includes("settings")) {
-            applySettings(payload.settings || payload.data || payload.message || payload);
+            source = payload.message || payload.settings || payload.data || payload;
+          } else if (!command || commandName.includes("setting")) {
+            source = payload.settings || payload.data || payload.message || payload;
+          }
+
+          if (source) {
+            applySettings(source, { silent: true });
           }
         } catch (error) {
-          setStatus(`settings error: ${error.message}`);
+          console.info("settings hot reload message ignored", error);
         }
       });
 
       settingsSocket.addEventListener("close", () => {
         if (connectionId !== settingsConnectionId) return;
-        clearTimeout(settingsReconnectTimer);
-        clearInterval(settingsPollTimer);
+        clearInterval(settingsLiveSyncTimer);
         settingsReconnectTimer = setTimeout(connectSettings, CONFIG.retryDelayMs);
+      });
+
+      settingsSocket.addEventListener("error", (error) => {
+        if (connectionId !== settingsConnectionId) return;
+        console.info("settings hot reload unavailable", error);
+        try {
+          settingsSocket?.close();
+        } catch {
+          // The close handler owns reconnecting this optional channel.
+        }
       });
     }
 
     applyVisualConfig();
+    applyDebugStatusVisibility();
+    updateAudioMatchBadge();
     loadSettingsFile().finally(() => Promise.allSettled([
       loadSongCacheIndex(),
       loadSongAliases(),

@@ -1594,14 +1594,18 @@ let AudioFingerprintRuntime = (() => {
     return o;
 })
 
+let fingerprintRuntimePromise = null
+
 function instantiateRuntime(){
-    return new Promise((resolve, reject) => {
+    if (fingerprintRuntimePromise) return fingerprintRuntimePromise
+    fingerprintRuntimePromise = new Promise((resolve, reject) => {
         var fpRuntime = AudioFingerprintRuntime()
         var monitor = setInterval(() => {
             if (typeof fpRuntime.ExtractQueryFP == "function") 
                 clearInterval(monitor) || resolve(fpRuntime)
         }) 
     })
+    return fingerprintRuntimePromise
 }
 
 function GenerateFP(floatArray) {
