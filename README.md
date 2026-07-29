@@ -4,7 +4,7 @@
 
 UI 示例，对应谱面：[osu!mania beatmapset 1790742](https://osu.ppy.sh/beatmapsets/1790742#mania)
 
-<img width="772" height="345" alt="Live Lyrics overlay preview" src="https://github.com/user-attachments/assets/95e8e638-5125-49c7-a545-d1dced9fc562" />
+<img width="920" height="403" alt="微信图片_20260729145225_1447_79" src="https://github.com/user-attachments/assets/a8b1cea0-ce9b-4e5f-8c57-a1ef819b167c" />
 
 ## 功能
 
