@@ -12,16 +12,14 @@ UI 示例，对应谱面：[osu!mania beatmapset 1790742](https://osu.ppy.sh/bea
 - 支持 LRC、YRC 逐词高亮、歌词切换动画、自定义 TTF 字体与字号。
 - 支持标题搜索、歌曲 ID 缓存、手动修正和自动写入缓存。
 - 听歌识曲会使用当前谱面音频识别网易云歌曲；可选 25% / 50% / 75% 多窗口核验，并在右上角显示可信度。
-- 支持难度名中的 `1.2x`、`x1.2`、`1,2x` 等倍率；`[120]`、`[135]` 一类 BPM 标签可自动推算识曲与歌词倍率。
+- 支持难度名中的 `1.2x`、`x1.2`、`1,2x` 等倍率；`[120]`、`[135]` 一类 BPM 标签可自动推算识曲与歌词倍率（实验性）。
 - 非合包谱面会在同一谱面集内复用歌曲结果，切换难度不重复搜索；Pack、Collection、LNEX 等合包会继续从难度名读取歌曲信息。
 - 支持全局偏移、单曲偏移、自动偏移和右上角偏移显示。
-- 可播放网易云 MV 背景；可选 Bilibili 视频回退，支持时长校验、黑名单和白名单评分。
+- 可播放网易云 MV 背景；可选 Bilibili 视频回退（实验性），支持时长校验、黑名单和白名单评分。
 
 ## 依赖
 
 - [tosu](https://github.com/tosuapp/tosu)
-
-本项目已包含专用本地代理 `lyrics-proxy.exe`，不需要额外启动 `NeteaseCloudMusicApiEnhanced/api-enhanced`，也不需要安装 Node.js。
 
 ## 安装
 
@@ -62,17 +60,19 @@ $env:TOSU_PATH = 'D:\Apps\tosu\tosu.exe'
 
 ## 常用设置
 
-- `Enable Audio Match`：用谱面音频识曲；关闭后只进行标题搜索。（性能）
-- `Always Use 25% / 50% / 75% / Title`：始终完成四路识曲核验。（性能）
-- `Preserve-Pitch Match`：倍率谱面额外尝试不变调识曲。（性能）
+- `Enable Audio Match`：用谱面音频识曲；关闭后只进行标题搜索。
+- `Always Use 25% / 50% / 75% / Title`：始终完成四路识曲核验。
+- `Preserve-Pitch Match`：倍率谱面额外尝试不变调识曲。
 - `Reuse Song Within Set`：非合包谱面切换难度时复用歌曲结果。
-- `BPM Tag Audio Match`：处理难度名中的 `[120]` 等 BPM 标签。（性能）
+- `BPM Tag Audio Match`：处理难度名中的 `[120]` 等 BPM 标签。（实验性）
 - `Audio Match Min/Max Offset`：识曲偏移可信范围，单位毫秒。
 - `Lyric Offset`：全局歌词偏移，单位毫秒。
 - `Auto Speed From Difficulty`：读取难度名倍率并缩放歌词时间。
 - `MV Background`：启用 MV 视频背景；可调整亮度、透明度、遮罩和裁切。
 - `MV Background Source Priority`：选择网易云或 Bilibili 的优先级。
 - `Show Debug Status`：显示底部识曲、网络和视频来源信息。
+- `Enable Custom Font`：启用自定义字体功能。
+- `Font Scale`：子项允许修改任意字体大小。
 
 ## 缓存和手动修正
 
@@ -113,12 +113,11 @@ http://127.0.0.1:3002/song-cache
 
 ## Bilibili 黑白名单
 
-`bilibili-blacklist.txt` 位于 `lyrics-proxy.exe` 旁。它支持两个区段：
+`bilibili-blacklist.txt` 位于 `lyrics-proxy.exe` 旁。它支持两个区段，例如：
 
 ```text
 [blacklist]
 手元
-phigros
 
 [whitelist]
 mv
@@ -129,7 +128,7 @@ official
 - 白名单命中候选标题时加分；未命中则扣分。
 - 代理只在时长合格的前五个搜索候选中选择分数最高者。
 
-修改文件后无需重启代理。
+修改文件后无需重启。
 
 ## 文件说明
 
@@ -144,6 +143,4 @@ official
 
 ## 备注
 
-- 网易云歌曲存在不代表一定有同步 LRC/YRC；听歌识曲已确认歌曲但无歌词时，面板会显示“纯音乐，请欣赏”。
 - 听歌识曲失败时会回退标题搜索；右上角可信度会显示对应的识别结果。
-- Bilibili 搜索排序由服务端决定，白名单和时长校验只能在返回候选中筛选，不能保证找到指定 BV。
