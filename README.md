@@ -4,7 +4,7 @@
 
 UI 示例，对应谱面：[osu!mania beatmapset 1790742](https://osu.ppy.sh/beatmapsets/1790742#mania)
 
-<img width="772" height="345" alt="Live Lyrics overlay preview" src="https://github.com/user-attachments/assets/95e8e638-5125-49c7-a545-d1dced9fc562" />
+<img width="896" height="379" alt="微信图片_20260730151112_1_2" src="https://github.com/user-attachments/assets/b07d8481-5bfb-45e7-b73b-6f00b12906cb" />
 
 ## 功能
 
@@ -15,7 +15,7 @@ UI 示例，对应谱面：[osu!mania beatmapset 1790742](https://osu.ppy.sh/bea
 - 支持难度名中的 `1.2x`、`x1.2`、`1,2x` 等倍率；`[120]`、`[135]` 一类 BPM 标签可自动推算识曲与歌词倍率。
 - 非合包谱面会在同一谱面集内复用歌曲结果，切换难度不重复搜索；Pack、Collection、LNEX 等合包会继续从难度名读取歌曲信息。
 - 支持全局偏移、单曲偏移、自动偏移和右上角偏移显示。
-- 可播放网易云 MV 背景；可选 Bilibili 视频回退，支持时长校验、黑名单和白名单评分。
+- 可播放网易云 MV 背景；支持时长校验、黑名单和白名单评分。
 
 ## 依赖
 
@@ -62,17 +62,19 @@ $env:TOSU_PATH = 'D:\Apps\tosu\tosu.exe'
 
 ## 常用设置
 
-- `Enable Audio Match`：用谱面音频识曲；关闭后只进行标题搜索。（性能）
-- `Always Use 25% / 50% / 75% / Title`：始终完成四路识曲核验。（性能）
-- `Preserve-Pitch Match`：倍率谱面额外尝试不变调识曲。（性能）
+- `Enable Audio Match`：用谱面音频识曲；关闭后只进行标题搜索。
+- `Always Use 25% / 50% / 75% / Title`：始终完成四路识曲核验。
+- `Preserve-Pitch Match`：倍率谱面额外尝试不变调识曲。
 - `Reuse Song Within Set`：非合包谱面切换难度时复用歌曲结果。
-- `BPM Tag Audio Match`：处理难度名中的 `[120]` 等 BPM 标签。（性能）
+- `BPM Tag Audio Match`：处理难度名中的 `[120]` 等 BPM 标签。（实验性，暂不推荐启用）
 - `Audio Match Min/Max Offset`：识曲偏移可信范围，单位毫秒。
 - `Lyric Offset`：全局歌词偏移，单位毫秒。
 - `Auto Speed From Difficulty`：读取难度名倍率并缩放歌词时间。
 - `MV Background`：启用 MV 视频背景；可调整亮度、透明度、遮罩和裁切。
-- `MV Background Source Priority`：选择网易云或 Bilibili 的优先级。
+- `MV Background Source Priority`：选择网易云或 Bilibili 视频搜索（实验性，暂不推荐启用）的优先级。
 - `Show Debug Status`：显示底部识曲、网络和视频来源信息。
+- `Enable Custom Font`：允许用户自定义修改字体。
+- `Font Scale`：允许用户自定义修改字号。
 
 ## 缓存和手动修正
 
