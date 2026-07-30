@@ -59,15 +59,15 @@ npm run build
 Outputs:
 
 - `dist/lyrics-proxy.exe`: the loopback proxy.
-- `dist/Start-Tosu-Lyrics.exe`: starts the proxy, waits for `/health`, starts
-  `E:\tosu\tosu.exe`, and stops the proxy when tosu exits.
+- `dist/Start-Tosu-Lyrics.exe`: starts the proxy, waits for `/health`, finds
+  `tosu.exe` relative to the plugin folder, and stops the proxy when tosu exits.
 
 For release, place both EXEs beside the plugin's `index.html` and
 `song-cache.json`. The packaged launcher then finds its sibling
 `lyrics-proxy.exe` and writes the cache beside itself.
 
-Before packaging, edit `TOSU_PATH` only when tosu is not installed at
-`E:\tosu\tosu.exe`. At runtime it can also be overridden without rebuilding:
+With the standard `tosu/static/plugin-folder` layout no configuration is
+needed. At runtime, `TOSU_PATH` can override the automatic relative lookup:
 
 ```powershell
 $env:TOSU_PATH = 'D:\Apps\tosu\tosu.exe'
