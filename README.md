@@ -21,7 +21,6 @@ UI 示例，对应谱面：[osu!mania beatmapset 1790742](https://osu.ppy.sh/bea
 
 - [tosu](https://github.com/tosuapp/tosu)
 
-本项目已包含专用本地代理 `lyrics-proxy.exe`，不需要额外启动 `NeteaseCloudMusicApiEnhanced/api-enhanced`，也不需要安装 Node.js。
 
 ## 安装
 
