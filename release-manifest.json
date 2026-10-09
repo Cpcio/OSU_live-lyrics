@@ -1,0 +1,41 @@
+{
+  "files": [
+    "index.html",
+    "metadata.txt",
+    "settings.json",
+    "song-cache.json",
+    "css/overlay-base.css",
+    "css/overlay-layouts.css",
+    "js/lyric-alignment.js",
+    "js/afp.wasm.js",
+    "js/afp.js",
+    "js/audio-reference-align.js",
+    "js/audio-reference-worker.js",
+    "js/soundtouch.js",
+    "js/SOUNDTOUCH-LICENSE.txt",
+    "js/overlay/state.js",
+    "js/overlay/utils.js",
+    "js/overlay/settings.js",
+    "js/overlay/metadata.js",
+    "js/overlay/catalog.js",
+    "js/overlay/quality.js",
+    "js/overlay/network.js",
+    "js/overlay/audio.js",
+    "js/overlay/match-a.js",
+    "js/overlay/match-b.js",
+    "js/overlay/background.js",
+    "js/overlay/layout.js",
+    "js/overlay/lyrics.js",
+    "js/overlay/renderer.js",
+    "js/overlay/tracks.js",
+    "js/overlay/connections.js",
+    "js/overlay/boot.js"
+  ],
+  "executables": ["lyrics-proxy.exe", "Start-Tosu-Lyrics.exe"],
+  "distributionNotices": {
+    "QQMusicApi-LICENSE.txt": "lyrics-proxy/QQMusicApi-LICENSE.txt",
+    "UPSTREAM-NOTICE.md": "lyrics-proxy/UPSTREAM-NOTICE.md"
+  },
+  "legacyRuntimeFiles": ["bilibili-blacklist.txt"],
+  "defaultRuntimeDirectory": "lyrics-proxy/dist-runtime-mv-20261004"
+}

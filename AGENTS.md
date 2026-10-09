@@ -1,0 +1,7 @@
+# Release packaging
+
+- A release contains only the files in `release-manifest.json`: runtime frontend assets, the two executables, settings, the song-cache seed and required third-party notices. No README/history, diagnostics, screenshots, recordings, tests, proxy-source, node_modules, backup, build tools or logs belong in `releases/<version>/`.
+- Build each new version using `node tools/package-release.cjs --name <name> --runtime-dir <matching binary directory>`. Start with a new directory; never copy the preceding release directory and never overwrite an existing version. The builder refuses existing destinations and writes hashes/reports into development `diagnostics/release-packages/` only.
+- When adding runtime assets, update the explicit manifest and verify HTML, dynamic imports, Worker dependencies and licenses. Run `node tools/package-release.cjs --verify releases/<name>` before delivery, plus checks appropriate to the actual change.
+- Keep source releases, maintenance notes, test data and historical diagnostics in the development workspace or a separate source archive. Required third-party license notices remain in the runtime package. The archived extras of existing releases are at `backup/release-extras-20261004/<release>/`; do not delete them or alter historical runtime file contents.
+- Never modify E: historical content. A runtime package does not need local Node.js, proxy-source or node_modules: both EXEs embed their own runtime and backend dependencies.

@@ -1599,12 +1599,21 @@ let fingerprintRuntimePromise = null
 function instantiateRuntime(){
     if (fingerprintRuntimePromise) return fingerprintRuntimePromise
     fingerprintRuntimePromise = new Promise((resolve, reject) => {
-        var fpRuntime = AudioFingerprintRuntime()
-        var monitor = setInterval(() => {
-            if (typeof fpRuntime.ExtractQueryFP == "function") 
-                clearInterval(monitor) || resolve(fpRuntime)
-        }) 
-    })
+        var monitor, deadline, finished = false
+        const finish = (error, runtime) => {
+            if (finished) return
+            finished = true
+            clearInterval(monitor)
+            clearTimeout(deadline)
+            error ? reject(error) : resolve(runtime)
+        }
+        var fpRuntime = AudioFingerprintRuntime({ onAbort: reason => finish(new Error('fingerprint runtime: ' + reason)) })
+        if (finished) return
+        const check = () => { if (typeof fpRuntime.ExtractQueryFP == 'function') finish(null, fpRuntime) }
+        monitor = setInterval(check, 16)
+        deadline = setTimeout(() => finish(new Error('fingerprint runtime timed out')), 10000)
+        check()
+    }).catch(error => { fingerprintRuntimePromise = null; throw error })
     return fingerprintRuntimePromise
 }
 

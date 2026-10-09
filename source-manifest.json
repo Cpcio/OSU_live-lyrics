@@ -1,0 +1,31 @@
+{
+  "description": "GitHub source export: frontend inputs come from release-manifest.json; no EXEs, historical packages or recorded media.",
+  "files": [
+    ".gitignore",
+    "AGENTS.md",
+    "README.md",
+    "MAINTENANCE.md",
+    "SOURCE_LAYOUT.md",
+    "THIRD_PARTY.md",
+    "release-manifest.json",
+    "source-manifest.json",
+    "tools/package-release.cjs",
+    "tools/package-source.cjs",
+    "lyrics-proxy/package.json",
+    "lyrics-proxy/pnpm-lock.yaml",
+    "lyrics-proxy/README.md",
+    "lyrics-proxy/QQMusicApi-LICENSE.txt",
+    "lyrics-proxy/UPSTREAM-NOTICE.md",
+    "lyrics-proxy/src/server.js",
+    "lyrics-proxy/src/start-tosu.js",
+    "lyrics-proxy/src/upstream.js",
+    "lyrics-proxy/src/netease.js",
+    "lyrics-proxy/src/qqmusic.js",
+    "lyrics-proxy/src/cache.js",
+    "lyrics-proxy/src/vendor/netease-crypto.js",
+    "diagnostics/stability.test.cjs",
+    "diagnostics/lyric-quality.test.cjs",
+    "diagnostics/lib/overlay-source.cjs",
+    "diagnostics/fixtures/background-colour-pre18.js"
+  ]
+}

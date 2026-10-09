@@ -8,14 +8,6 @@
     "value": ""
   },
   {
-    "uniqueID": "neteaseApiBase",
-    "type": "text",
-    "title": "网易云 API 地址 / NetEase API Base",
-    "description": "本地网易云 API 地址 / Local NetEase Cloud Music API base URL.",
-    "options": [],
-    "value": "http://127.0.0.1:3002"
-  },
-  {
     "uniqueID": "lyricOffsetMs",
     "type": "number",
     "title": "全局歌词偏移 / Lyric Offset",
@@ -24,10 +16,23 @@
     "value": 0
   },
   {
+    "uniqueID": "lyricSourcePriority",
+    "type": "options",
+    "title": "歌词来源优先级 / Lyric Source",
+    "description": "先显示可用歌词，再后台比较另一来源；有效同步原文和中文翻译优先，质量相近时按此设置选择，默认网易云。不同版本需核对原文和时间轴，不能只因有翻译就替换。仅网易云/仅 QQ 模式不进行双源择优。",
+    "options": [
+      "netease-first",
+      "qq-first",
+      "netease-only",
+      "qq-only"
+    ],
+    "value": "netease-first"
+  },
+  {
     "uniqueID": "hAudioMatch",
     "type": "header",
     "title": "听歌识曲 / Audio Match",
-    "description": "",
+    "description": "自动选段、不变调、多窗口核验、难度倍速和 BPM 推算固定开启，无需额外配置。 / Automatic sampling, pitch preservation, multi-window checks and speed detection are built in.",
     "options": [],
     "value": ""
   },
@@ -40,116 +45,15 @@
     "value": true
   },
   {
-    "uniqueID": "audioMatchStartSeconds",
-    "type": "number",
-    "title": "识曲开始时间 / Match Start",
-    "description": "负数时自动取歌曲中点前后各 7.5 秒；非负数时从指定秒数开始取样 / Negative uses a 15s window centered on the song; non-negative starts from this second.",
-    "options": [],
-    "value": -1
-  },
-  {
-    "uniqueID": "audioMatchDurationSeconds",
-    "type": "number",
-    "title": "识曲时长 / Match Duration",
-    "description": "开始时间为非负数时使用的取样秒数；开始时间为负数时固定使用 15 秒 / Sample length for non-negative Match Start; negative Match Start always uses 15s.",
-    "options": [],
-    "value": 15
-  },
-  {
-    "uniqueID": "audioMatchMinOffsetMs",
-    "type": "number",
-    "title": "识曲最小偏移 / Audio Match Min Offset",
-    "description": "小于此值的识曲偏移会被视为异常并回退标题搜索 / Audio-match offsets below this are rejected and metadata search is used.",
-    "options": [],
-    "value": -40000
-  },
-  {
-    "uniqueID": "audioMatchMaxOffsetMs",
-    "type": "number",
-    "title": "识曲最大偏移 / Audio Match Max Offset",
-    "description": "大于此值的识曲偏移会被视为异常并回退标题搜索 / Audio-match offsets above this are rejected and metadata search is used.",
-    "options": [],
-    "value": 100000
-  },
-  {
-    "uniqueID": "audioMatchPitchPreserving",
-    "type": "checkbox",
-    "title": "不变调降速识曲（实验性） / Preserve-Pitch Match (Experimental)",
-    "description": "仅检测到谱面倍速时生效。常规变调降速识曲失败或偏移异常后，额外以保持音调的时间拉伸重试；会增加 CPU 使用和等待时间 / Only used when a speed keyword is detected. Retries with pitch-preserving time stretch after normal pitch-shift matching fails; increases CPU use and wait time.",
-    "options": [],
-    "value": true
-  },
-  {
-    "uniqueID": "audioMatchMultiWindowEnabled",
-    "type": "checkbox",
-    "title": "多窗口听歌识曲 / Multi-Window Audio Match",
-    "description": "先识别歌曲中点；中点结果未被标题搜索前三候选确认时，再识别 25% 和 75% 位置并进行歌曲 ID 与偏移共识判断。仅在 Match Start 为负数时生效 / Match the midpoint first. When title-search top candidates do not confirm it, also match 25% and 75% positions and use ID/offset consensus. Only applies when Match Start is negative.",
-    "options": [],
-    "value": true
-  },
-  {
-    "uniqueID": "audioMatchAlwaysUseAllWindows",
-    "type": "checkbox",
-    "title": "始终进行四路识曲 / Always Use 25% / 50% / 75% / Title",
-    "description": "开启后即使 50% 识曲结果已被标题候选确认，仍会继续识别 25% 和 75% 并计算四路可信度；会增加识曲等待时间和少量 CPU 使用 / Continue with 25% and 75% even when 50% is confirmed by title search, then calculate four-source confidence. Adds matching time and a small CPU cost.",
-    "options": [],
-    "value": true
-  },
-  {
-    "uniqueID": "audioMatchConsensusOffsetMs",
-    "type": "number",
-    "title": "识曲偏移共识阈值 / Audio Match Offset Consensus",
-    "description": "多个窗口识别到同一歌曲时，偏移差不超过此毫秒数会被视为一致并取平均值；建议 100 到 1000 / When windows identify the same song, offsets within this many milliseconds are treated as consistent and averaged. Recommended: 100 to 1000.",
-    "options": [],
-    "value": 200
-  },
-  {
-    "uniqueID": "autoOffsetFromFirstObject",
-    "type": "checkbox",
-    "title": "首句自动偏移 / First-Line Auto Offset",
-    "description": "用第一句歌词和第一个物件估算偏移，默认关闭；听歌识曲开启时不会使用它 / Estimate offset from first lyric and first object, disabled by default; ignored when Audio Match is enabled.",
-    "options": [],
-    "value": false
-  },
-  {
-    "uniqueID": "autoOffsetMaxMs",
-    "type": "number",
-    "title": "自动偏移上限 / Auto Offset Limit",
-    "description": "自动估算偏移的最大绝对值，单位毫秒 / Maximum absolute auto offset in milliseconds.",
-    "options": [],
-    "value": 45000
-  },
-  {
-    "uniqueID": "autoOffsetLeadMs",
-    "type": "number",
-    "title": "自动提前量 / Auto Offset Lead",
-    "description": "歌词普遍滞后时增大它，单位毫秒 / Extra milliseconds added when lyrics feel late.",
-    "options": [],
-    "value": 900
-  },
-  {
-    "uniqueID": "autoSpeedFromDifficulty",
-    "type": "checkbox",
-    "title": "难度名自动倍速 / Auto Speed From Difficulty",
-    "description": "从难度名读取 1.2x、x1.2、1,2x、x1,2，以及独立的 1.2 / 1,2 等倍速关键词并缩放歌词时间 / Read 1.2x, x1.2, comma-decimal variants, and standalone 1.2 / 1,2 speed keywords from difficulty name.",
-    "options": [],
-    "value": true
-  },
-  {
-    "uniqueID": "reuseSameSongSet",
-    "type": "checkbox",
-    "title": "同包复用歌曲结果 / Reuse Song Within Set",
-    "description": "非 Pack/Collection/LNEX 合包时，切换难度不重复搜索；会重新计算难度倍率。",
-    "options": [],
-    "value": true
-  },
-  {
-    "uniqueID": "bpmTagAudioMatchEnabled",
-    "type": "checkbox",
-    "title": "BPM 标签识曲 / BPM Tag Audio Match",
-    "description": "检测 [120] 一类 BPM 标签后，先按标题获取 BPM 再识曲（性能）。",
-    "options": [],
-    "value": true
+    "uniqueID": "audioMatchMode",
+    "type": "options",
+    "title": "识曲模式 / Audio Match Mode",
+    "description": "A：用当前谱面音频指纹识曲，取得歌词后立即显示。B：先显示 A 或标题搜索得到的歌词，再通过本地代理临时读取候选参考音频，在后台核验并精修时间；核验成功才刷新替换，失败保留已显示的歌词。 / A: fingerprint recognition and immediate lyrics. B: show available lyrics first, then validate reference audio and refine timing in the background; retain the foreground if validation fails.",
+    "options": [
+      "a",
+      "b"
+    ],
+    "value": "b"
   },
   {
     "uniqueID": "speedMultiplier",
@@ -160,10 +64,26 @@
     "value": 1
   },
   {
+    "uniqueID": "lyricSingleLineEnabled",
+    "type": "checkbox",
+    "title": "歌词单行省略 / Single-line Lyrics",
+    "description": "默认开启，超宽上下句及翻译显示省略号。当前长原文有翻译时优先使用共用第二行设置；关闭共用第二行后也可恢复原文单行/换行。仅影响显示，不截断歌词数据或逐字时间。",
+    "options": [],
+    "value": true
+  },
+  {
+    "uniqueID": "autoContextLinesEnabled",
+    "type": "checkbox",
+    "title": "按高度自动分配上下句 / Auto Context Lines",
+    "description": "仅用于 dashboard 与 lazer：按歌词区域高度、字号和换行选择完整上下句，尽量等量，多一句时优先下一句；关闭后恢复手动数量。subtitle 始终不显示前后句，但保留本设置。 / dashboard/lazer only: fit balanced context lines to height, with one extra next line when possible. subtitle has no context and retains this setting.",
+    "options": [],
+    "value": false
+  },
+  {
     "uniqueID": "contextBefore",
     "type": "number",
     "title": "上一行数量 / Previous Lines",
-    "description": "当前歌词前显示多少行 / How many previous lyric lines to show.",
+    "description": "dashboard 与 lazer 关闭自动分配时，当前歌词前显示多少行；subtitle 不显示前后句 / Previous sentence count for dashboard/lazer when automatic allocation is disabled; subtitle has no context.",
     "options": [],
     "value": 2
   },
@@ -171,15 +91,31 @@
     "uniqueID": "contextAfter",
     "type": "number",
     "title": "下一行数量 / Next Lines",
-    "description": "当前歌词后显示多少行 / How many next lyric lines to show.",
+    "description": "dashboard 与 lazer 关闭自动分配时，当前歌词后显示多少行；首句开始前至少预告第一句。subtitle 不显示前后句 / Next sentence count for dashboard/lazer; before singing, at least the first sentence is previewed. subtitle has no context.",
     "options": [],
     "value": 2
+  },
+  {
+    "uniqueID": "translatedLyricWrapEnabled",
+    "type": "checkbox",
+    "title": "译文与长原词共用第二行 / Shared Translation Row",
+    "description": "用于 dashboard 与 lazer：有有效翻译时，长原词的第二行左侧显示尾部、右侧显示较小字号的翻译，留出间距；尾部放不下时省略。无翻译或中文原词保持单行。subtitle 始终使用独立居中的原文与翻译行。 / dashboard/lazer: long translated originals share their second row. subtitle keeps separate centred original and translation rows.",
+    "options": [],
+    "value": true
+  },
+  {
+    "uniqueID": "lyricColorGradientEnabled",
+    "type": "checkbox",
+    "title": "当前歌词使用柔和渐变 / Soft Lyric Gradient",
+    "description": "歌词颜色取背景主色，降低饱和度并混入白色。开启后使用两种背景主色横向渐变；关闭时使用单一柔和主色。进度条配色保持原有逻辑。 / Use a softened background-derived lyric gradient instead of one softened dominant colour.",
+    "options": [],
+    "value": false
   },
   {
     "uniqueID": "showTranslation",
     "type": "checkbox",
     "title": "显示翻译 / Show Translation",
-    "description": "网易云返回翻译歌词时显示翻译 / Show translated lyrics when available.",
+    "description": "显示当前歌词来源返回的有效中文翻译 / Show useful Chinese translations from the selected lyric provider.",
     "options": [],
     "value": true
   },
@@ -206,7 +142,7 @@
     "uniqueID": "showDebugStatus",
     "type": "checkbox",
     "title": "显示调试信息 / Show Debug Status",
-    "description": "显示面板底部的网络、识曲窗口、MV 来源及错误信息；关闭时仅隐藏显示，不影响功能 / Show network, audio-match window, MV source, and error details at the bottom of the panel. Hiding it does not affect functionality.",
+    "description": "可选显示面板底部的网络、识曲、MV 来源及错误信息。关闭后 dashboard 与 lazer 的识曲比例、offset 下移到释放出的底部空间，不影响识曲或 MV / Optional bottom debug information. When hidden, dashboard and lazer move the match/offset badges into the released footer space without affecting recognition or MV.",
     "options": [],
     "value": true
   },
@@ -214,7 +150,7 @@
     "uniqueID": "lyricTransitionMode",
     "type": "options",
     "title": "歌词切换动画 / Lyric Transition",
-    "description": "fade 为淡入淡出，roll 为滚动过渡，off 为关闭动画 / fade crossfades, roll slides lines between positions, off disables animation.",
+    "description": "fade 为原文与翻译共同淡入淡出；roll 同时滚动上下句，当前原句中心保持固定；off 关闭动画。快速切句和跳转会取消旧动画 / fade crossfades original and translation together; roll also moves context; off disables transitions.",
     "options": [
       "fade",
       "roll",
@@ -311,10 +247,18 @@
     "value": 1
   },
   {
+    "uniqueID": "audioMatchBadgeFontScale",
+    "type": "number",
+    "title": "识曲标识字号倍率 / Recognition Badge Font Scale",
+    "description": "独立调整简短状态标识的字号，范围 0.5 到 3。A：识曲；B：后台校正；TXT：标题命中；N/A：无可用歌词；n/3：三个音频位置中支持当前结果的独立片段数，并非识别概率。",
+    "options": [],
+    "value": 1
+  },
+  {
     "uniqueID": "offsetFontScale",
     "type": "number",
     "title": "偏移字号倍率 / Offset Font Scale",
-    "description": "右上角偏移值的字号倍率 / Font scale for the top-right offset value.",
+    "description": "独立调整偏移值的字号，仅显示 +6ms、-6ms 等简短数值，范围 0.5 到 3，不影响识曲标识字号。",
     "options": [],
     "value": 1
   },
@@ -335,30 +279,6 @@
     "value": 1
   },
   {
-    "uniqueID": "searchLimit",
-    "type": "number",
-    "title": "搜索候选数 / Search Limit",
-    "description": "标题搜索时检查多少个网易云候选 / How many NetEase candidates to inspect.",
-    "options": [],
-    "value": 8
-  },
-  {
-    "uniqueID": "songCachePath",
-    "type": "text",
-    "title": "缓存文件路径 / Song Cache Path",
-    "description": "可编辑歌曲 ID 缓存 JSON 路径 / Editable song id cache JSON path.",
-    "options": [],
-    "value": "song-cache.json"
-  },
-  {
-    "uniqueID": "songCacheWriteEndpoint",
-    "type": "text",
-    "title": "缓存写入器 / Song Cache Writer",
-    "description": "可选本地写入器地址；启动 cache-writer.js 后填 http://127.0.0.1:3001/song-cache / Optional local writer endpoint.",
-    "options": [],
-    "value": ""
-  },
-  {
     "uniqueID": "hLayout",
     "type": "header",
     "title": "布局 / Layout",
@@ -367,18 +287,106 @@
     "value": ""
   },
   {
+    "uniqueID": "lyricLayout",
+    "type": "options",
+    "title": "歌词布局 / Lyric Layout",
+    "description": "lazer：紧凑上下句与纵向渐变进度；dashboard：半透明底板双栏与底部频谱。二者在首句开始前将首句置于下一句位置，当前句显示居中圆点进度；纯音乐、无同步歌词不显示此提示。subtitle：仅显示居中的当前原文与有效翻译，背景完全透明，不播放 MV，不显示前后句、标题、状态或进度条；保留其他布局的设置，切回时恢复。 / lazer: compact lyric card; dashboard: cover/lyrics and spectrum. Both show intro dots before the first timed vocal. subtitle: transparent current original and translation only; no MV or surrounding content.",
+    "options": [
+      "lazer",
+      "dashboard",
+      "subtitle"
+    ],
+    "value": "lazer"
+  },
+  {
+    "uniqueID": "dashboardSongIconEnabled",
+    "type": "checkbox",
+    "title": "Dashboard 歌曲图标 / Dashboard Song Icon",
+    "description": "在 dashboard 左侧信息栏显示从谱面背景中心截取的方形歌曲图标。仅在 dashboard 布局生效，不保存图片或新增网络请求 / Shows a square crop from the beatmap background in the dashboard song panel. Dashboard only; no image is stored and no extra request is made.",
+    "options": [],
+    "value": true
+  },
+  {
+    "uniqueID": "dashboardSongIconStyle",
+    "type": "options",
+    "title": "Dashboard 图标样式 / Dashboard Icon Style",
+    "description": "square：圆角方形；circle：静态圆形；record：圆形唱片，播放时旋转、暂停时停止。图标大小与居中位置保持不变。 / Square, circle, or spinning record; rotation follows playback.",
+    "options": [
+      "square",
+      "circle",
+      "record"
+    ],
+    "value": "square"
+  },
+  {
+    "uniqueID": "dashboardSongIconSizePx",
+    "type": "number",
+    "title": "Dashboard 图标大小 / Dashboard Icon Size",
+    "description": "0 自动填充可用空间；手动边长 64–320 像素。封面中心位于标题与底部标识之间，切句、翻译及上下句不改变封面尺寸。调整窗口、标题或设置时重新计算可用尺寸 / 0 fills available space; manual size: 64–320 pixels. The cover stays centred between the title and footer badges. Panel/header/settings changes adapt its size; sentence changes do not resize it.",
+    "options": [],
+    "value": 0
+  },
+  {
+    "uniqueID": "dashboardLeftColumnPercent",
+    "type": "number",
+    "title": "Dashboard 左栏宽度 / Dashboard Left Column Width",
+    "description": "左侧歌曲信息栏占整个 dashboard 宽度的百分比，范围 22 到 55 / Percentage of dashboard width used by the song-information column. Range 22 to 55.",
+    "options": [],
+    "value": 36
+  },
+  {
+    "uniqueID": "timelineVisualizerEnabled",
+    "type": "checkbox",
+    "title": "频谱圆点进度条 / Spectrum Dot Progress",
+    "description": "仅在 dashboard 的底部进度条中显示实时音频频谱。已播放圆点按背景取色渐变上色，未播放部分保持暗色；无音频时仍显示圆点进度。lazer 使用纵向进度，subtitle 不显示进度或频谱 / Dashboard only: sampled-gradient spectrum dots. lazer uses a vertical progress rail; subtitle has no progress or spectrum.",
+    "options": [],
+    "value": true
+  },
+  {
+    "uniqueID": "timelineVisualizerBarCount",
+    "type": "number",
+    "title": "频谱柱数量 / Spectrum Dot Count",
+    "description": "范围 12 到 72。数量越多越细腻，但会略增加渲染负担 / Range 12 to 72. Higher values look denser and use slightly more rendering time.",
+    "options": [],
+    "value": 36
+  },
+  {
+    "uniqueID": "timelineVisualizerSensitivity",
+    "type": "number",
+    "title": "频谱灵敏度 / Spectrum Sensitivity",
+    "description": "范围 0.2 到 4。提高后较弱的声音也会形成更高的频谱柱 / Range 0.2 to 4. Higher values make quieter audio produce taller bars.",
+    "options": [],
+    "value": 1.25
+  },
+  {
+    "uniqueID": "timelineVisualizerFallSpeed",
+    "type": "number",
+    "title": "频谱下落速度 / Spectrum Fall Speed",
+    "description": "范围 0.4 到 12。提高后频谱柱会更快回落 / Range 0.4 to 12. Higher values make bars fall faster.",
+    "options": [],
+    "value": 3.8
+  },
+  {
     "uniqueID": "overlayWidthPx",
     "type": "number",
     "title": "面板宽度 / Overlay Width",
-    "description": "面板宽度，单位像素 / Panel width in pixels.",
+    "description": "面板外框宽度，范围 320 到 2400 像素。三种布局自动适配；超出 tosu 渲染窗口时按窗口可用宽度收缩 / Panel width, 320 to 2400 pixels. All layouts fit available host viewport space.",
     "options": [],
     "value": 900
+  },
+  {
+    "uniqueID": "overlayHeightPx",
+    "type": "number",
+    "title": "面板高度 / Overlay Height",
+    "description": "0 为按歌词高度自动计算；手动范围 160 到 1600 像素。与宽度共同控制横向或竖向比例，歌词、封面、频谱与底部状态自动适配。受 tosu 渲染窗口可用高度限制 / 0 computes height automatically; manual range: 160 to 1600 pixels. Width and height define landscape or portrait proportions; content fits available viewport space.",
+    "options": [],
+    "value": 0
   },
   {
     "uniqueID": "lyricsHeightPx",
     "type": "number",
     "title": "歌词高度 / Lyrics Height",
-    "description": "歌词区域固定高度，单位像素 / Fixed lyric viewport height in pixels.",
+    "description": "面板高度为 0 时使用的首选歌词高度；指定面板高度后，以面板剩余空间为准 / Preferred lyric height in automatic panel-height mode. With an explicit panel height, lyrics use the available content space.",
     "options": [],
     "value": 250
   },
@@ -413,7 +421,7 @@
     "uniqueID": "panelOpacity",
     "type": "number",
     "title": "面板透明度 / Panel Opacity",
-    "description": "范围 0 到 1 / Range 0 to 1.",
+    "description": "dashboard 与 lazer 的面板底色不透明度，范围 0 到 1；subtitle 始终保持完全透明，不受本选项影响 / Card background opacity, 0 to 1. subtitle remains fully transparent.",
     "options": [],
     "value": 0.5
   },
@@ -445,7 +453,7 @@
     "uniqueID": "mvBackgroundEnabled",
     "type": "checkbox",
     "title": "启用 MV 背景 / Enable MV Background",
-    "description": "识别或搜索确定网易云歌曲后，若该歌曲存在 MV，则在歌词面板底层播放；无 MV 时保留原有面板背景 / After a NetEase song is resolved, play its MV behind the lyric panel when available; keep the existing background when unavailable.",
+    "description": "仅用于 dashboard 与 lazer：优先保留网易云 MV，无 MV 或请求失败时，使用已核对同一录音的 QQ 歌曲补充 MV；未确认歌曲身份或均无视频时保留面板背景。subtitle 始终保持透明且停用 MV。",
     "options": [],
     "value": true
   },
@@ -498,55 +506,20 @@
     "value": 0.9
   },
   {
-    "uniqueID": "hBilibiliBackground",
-    "type": "header",
-    "title": "Bilibili 视频背景 / Bilibili Video Background",
-    "description": "仅在已启用 MV 背景且网易云没有对应 MV 时使用 / Used only when MV Background is enabled and NetEase has no MV.",
-    "options": [],
-    "value": ""
-  },
-  {
-    "uniqueID": "bilibiliBackgroundEnabled",
-    "type": "checkbox",
-    "title": "启用 Bilibili 视频回退 / Enable Bilibili Video Fallback",
-    "description": "网易云歌曲没有 MV 时，搜索 Bilibili 的第一条视频；仅在时长接近时作为背景播放 / When the NetEase song has no MV, search Bilibili's first video result and use it only when duration is close.",
-    "options": [],
-    "value": false
-  },
-  {
-    "uniqueID": "mvBackgroundSourcePriority",
-    "type": "options",
-    "title": "MV 背景来源优先级 / MV Background Source Priority",
-    "description": "选择优先尝试的背景来源；首选来源不可用时自动回退另一来源 / Select the background source to try first. The other source is used automatically when the preferred source is unavailable.",
-    "options": [
-      "netease",
-      "bilibili"
-    ],
-    "value": "netease"
-  },
-  {
-    "uniqueID": "bilibiliMaxDurationDeviationPercent",
-    "type": "number",
-    "title": "Bilibili 最大时长偏差 % / Bilibili Max Duration Deviation %",
-    "description": "第一条 Bilibili 搜索结果与网易云歌曲时长允许的最大百分比差异，范围 1 到 30；较低数值更安全 / Maximum allowed duration difference between Bilibili's first result and the NetEase song. Range 1 to 30; lower is safer.",
-    "options": [],
-    "value": 8
-  },
-  {
-    "uniqueID": "bilibiliSearchWithoutArtist",
-    "type": "checkbox",
-    "title": "Bilibili 搜索不含歌手 / Bilibili Search Without Artist",
-    "description": "开启后仅以网易云歌曲名搜索 Bilibili，不附加歌手名；仍会检查第一条视频的时长偏差 / Search Bilibili with only the NetEase song title, without the artist. The first result still must pass duration validation.",
-    "options": [],
-    "value": true
-  },
-  {
     "uniqueID": "hNetwork",
     "type": "header",
-    "title": "网络 / Network",
+    "title": "连接 / Connection",
     "description": "",
     "options": [],
     "value": ""
+  },
+  {
+    "uniqueID": "neteaseApiBase",
+    "type": "text",
+    "title": "歌词 API 地址 / Lyrics API Base",
+    "description": "同时提供网易云与 QQ 音乐的本地歌词代理地址。 / Local lyric proxy for NetEase and QQ Music.",
+    "options": [],
+    "value": "http://127.0.0.1:3002"
   },
   {
     "uniqueID": "fetchTimeoutMs",
@@ -555,13 +528,5 @@
     "description": "网易云 API 请求超时时间，单位毫秒 / NetEase API timeout in milliseconds.",
     "options": [],
     "value": 4500
-  },
-  {
-    "uniqueID": "allowPostFallback",
-    "type": "checkbox",
-    "title": "POST 兜底 / POST Fallback",
-    "description": "GET 遇到 HTTP 404/405 时改用 POST 重试 / Retry with POST when GET returns HTTP 404/405.",
-    "options": [],
-    "value": true
   }
 ]

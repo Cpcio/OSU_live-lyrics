@@ -1,0 +1,463 @@
+/* Presentation only: shared lyric, audio, background and settings logic stays
+   in js/overlay/. All accent colours come from the existing background sampler. */
+.overlay {
+  --spectrum-height: 34px;
+  --column-inset: 24px;
+  display: flex;
+  flex-direction: column;
+  left: 16px;
+  bottom: 16px;
+  width: min(var(--overlay-width), calc(100vw - 32px));
+  height: var(--panel-height, 400px);
+  max-height: calc(100vh - 32px);
+  padding: var(--panel-padding, 20px);
+  border-radius: 20px;
+  border-color: rgba(255, 255, 255, 0.14);
+  text-shadow: none;
+  text-rendering: auto;
+  backdrop-filter: none;
+  -webkit-font-smoothing: auto;
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.25), inset 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.overlay::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(125deg, var(--timeline-top), transparent 38%, transparent 75%, var(--timeline-bottom));
+  opacity: calc(var(--panel-alpha) * 0.09);
+}
+
+.offset-badge,
+.audio-match-badge {
+  min-width: 0;
+  max-width: 100%;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border-color: rgba(255, 255, 255, 0.13);
+  background: rgba(0, 0, 0, 0.1);
+  font-weight: 600;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.song-badges { align-items: center; }
+.offset-badge { align-self: center; }
+.song-copy { display: contents; }
+.overlay .artist[hidden] { display: none; }
+.song-icon, .title-tail { display: none; }
+.dashboard-header-final { display: contents; }
+.line.current { display: block; line-height: var(--presentation-lyric-line-height, 1.2); max-height: calc(2 * var(--presentation-lyric-line-height, 1.2em)); font-weight: 700; text-shadow: none; }
+.lyrics.is-transitioning .line.current { opacity: 1; transform: none; }
+.line.context-line { opacity: 1; color: rgba(255, 255, 255, 0.7); line-height: var(--presentation-context-line-height, 1.24); }
+/* WAAPI owns lyric motion. Legacy CSS transitions must not start a second
+   opacity/transform interpolation after snapshots or viewport changes. */
+.line { transform: none; transition: none; }
+.song { flex-shrink: 0; }
+.lyrics-shell { position: relative; flex: 1; min-height: 0; }
+.lyrics { display: block; height: 100%; min-height: 0; }
+.context { position: absolute; left: 0; right: 0; display: flex; flex-direction: column; gap: 7px; }
+#beforeLines { top: 0; height: var(--before-space, 0px); justify-content: flex-end; }
+#afterLines { top: var(--after-top, 100%); bottom: var(--context-footer-space, 0px); justify-content: flex-start; }
+.context .context-line { flex-shrink: 0; }
+.overlay .context .context-line[hidden] { display: none; }
+.current-block { position: absolute; left: 0; right: 0; top: var(--current-top, 0px); min-width: 0; }
+.lyrics { --context-clearance: 8px; }
+.overlay:not(.lyric-single-line) .context-line { -webkit-line-clamp: 2; }
+.overlay.lyric-single-line .line,
+.overlay.lyric-single-line .translation,
+.overlay.current-group-single-line .current-block .line,
+.overlay.current-group-single-line .current-block .translation {
+  display: block;
+  white-space: nowrap;
+  text-wrap: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  -webkit-line-clamp: unset;
+  max-height: none;
+}
+/* The original is always a visible row. Context transition state must never
+   leave it transparent while its separately rendered translation survives. */
+.overlay .lyrics .line.current { opacity: 1; visibility: visible; transform: none; }
+.layout-lazer .context, .layout-lazer .current-block { left: 8px; right: 8px; }
+/* Absolute MV layers use the panel's padding box. Assigning a grid area
+   shrinks them to the dashboard content box and leaves a rectangular edge. */
+.overlay .mv-background, .overlay.has-mv-background::before { grid-area: auto; }
+.meta-row { grid-template-columns: minmax(0, 1fr); gap: 0; margin-top: 9px; }
+.translation { color: rgba(255, 255, 255, 0.86); font-weight: 500; line-height: var(--presentation-translation-line-height, 1.25); }
+/* Original text keeps its full DOM/timing even when the visible tail clips. */
+.overlay .line.current { color: var(--lyric-color); }
+.lyric-main-row { display: contents; }
+.lyric-tail-row { display: none; }
+.overlay .current .lyric-progress-unit { color: var(--lyric-color); transition: opacity 90ms linear; }
+.overlay .current .lyric-progress-unit { opacity: 1; }
+.overlay .current .lyric-elided-unit { visibility: hidden; }
+.overlay .line.current[data-lyric-ellipsis],
+.overlay .line.current [data-lyric-ellipsis] { position: relative; text-overflow: clip; }
+[data-lyric-ellipsis]::after {
+  content: "…"; position: absolute; right: 0; bottom: 0;
+  color: var(--lyric-color); opacity: var(--ellipsis-opacity, 1); pointer-events: none;
+}
+.overlay.lyric-progress-enabled .current .lyric-progress-unit { opacity: var(--lyric-unplayed-opacity); }
+.overlay.lyric-color-gradient .current .lyric-progress-unit {
+  background-image: linear-gradient(90deg, var(--lyric-color-start), var(--lyric-color-end));
+  background-size: var(--lyric-gradient-width, 100%) 100%;
+  background-position: var(--lyric-gradient-x, 0px) 0;
+  background-repeat: no-repeat;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+.overlay.translated-wrap-enabled .lyrics.no-translation .line.current {
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-height: none;
+}
+.overlay .lyrics .current-block.lyric-shared-second-row .line.current {
+  white-space: normal; text-wrap: nowrap; max-height: none; overflow: hidden;
+}
+.lyric-shared-second-row .lyric-main-row {
+  display: block; white-space: nowrap; overflow: hidden;
+}
+.lyric-shared-second-row .lyric-tail-row {
+  display: block; width: var(--shared-tail-width); white-space: nowrap;
+  height: var(--shared-row-height); padding-top: max(0px, calc(var(--shared-row-height) - var(--presentation-lyric-line-height, 1.2em)));
+  overflow: hidden; text-overflow: ellipsis;
+}
+.overlay .lyrics .current-block.lyric-shared-second-row .meta-row {
+  position: absolute; right: var(--shared-translation-inset, 0px); bottom: var(--shared-translation-bottom, 0px); width: var(--shared-translation-width);
+  margin: 0; display: block;
+}
+.overlay .lyrics .current-block.lyric-shared-second-row .translation {
+  display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  text-align: right; -webkit-line-clamp: unset;
+}
+.current-time { position: absolute; right: 0; bottom: 0; opacity: 1; font-weight: 600; min-width: 9ch; min-height: 1.25em; }
+.overlay .lyrics.no-translation .meta-row {
+  display: none;
+  position: static;
+  width: auto;
+  margin: 0;
+  transform: none;
+  height: 0;
+}
+.status { flex-shrink: 0; font-size: var(--presentation-status-size, 11px); opacity: 1; color: rgba(255, 255, 255, 0.6); }
+
+/* 01 / LAZER: crisp lyric hierarchy and a quiet vertical progress rail. */
+.overlay.layout-lazer { backdrop-filter: none; }
+.layout-lazer .song {
+  position: relative;
+  margin-bottom: 8px;
+  padding: 0 0 9px 15px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+.layout-lazer .song::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 2px;
+  bottom: 17px;
+  width: 4px;
+  border-radius: 999px;
+  background: linear-gradient(var(--timeline-top), var(--timeline-bottom));
+}
+.layout-lazer .title { font-size: var(--presentation-title-size, 24px); }
+.layout-lazer .artist { font-size: var(--presentation-artist-size, 14px); }
+.layout-lazer .lyrics-shell { grid-template-columns: minmax(0, 1fr) 7px; grid-template-rows: minmax(0, 1fr); gap: 18px; }
+.overlay.layout-lazer .timeline-visualizer { display: none; }
+.layout-lazer .timeline { width: 7px; min-height: 0; height: 100%; }
+.layout-lazer .timeline-fill { box-shadow: none; }
+.layout-lazer .lyrics-shell { padding-bottom: var(--lazer-footer-reserve, 16px); }
+.layout-lazer:not(.show-debug-status) .song-badges {
+  position: absolute;
+  grid-area: auto;
+  top: var(--lazer-badge-top, 100%);
+  left: 15px;
+  right: auto;
+  flex-wrap: nowrap;
+}
+.layout-lazer .lyrics { padding: 0 8px; }
+.layout-lazer .lyrics { --context-clearance: 6px; }
+.overlay.layout-lazer .context { gap: 5px; }
+.overlay.layout-lazer .meta-row { margin-top: 6px; }
+.layout-lazer .current-time { right: 22px; }
+.layout-lazer .line.current { font-size: var(--presentation-lyric-size, 32px); }
+.layout-lazer .line.context-line { font-size: var(--presentation-context-size, 18px); }
+.layout-lazer .translation { font-size: var(--presentation-translation-size, 18px); }
+.layout-lazer .status { margin-top: 10px; }
+
+/* 02 / DASHBOARD: independent artwork and centred upper lyric area. */
+.overlay.layout-dashboard {
+  display: grid;
+  grid-template-columns: minmax(0, var(--dashboard-left-column)) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  column-gap: var(--column-gap, 24px);
+  row-gap: 0;
+  padding: var(--panel-padding, 20px);
+  backdrop-filter: none;
+}
+.layout-dashboard .song {
+  grid-column: 1;
+  grid-row: 1;
+  position: relative;
+  display: block;
+  min-height: 0;
+  margin: 0;
+  padding: 0 var(--column-inset) 0 0;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+.layout-dashboard .song-copy {
+  position: absolute;
+  top: 2px;
+  left: 0;
+  right: var(--column-inset);
+  display: block;
+  overflow: hidden;
+  max-height: var(--dashboard-header-max-height);
+}
+.layout-dashboard .title {
+  display: block;
+  white-space: pre;
+  font-size: var(--presentation-title-size, 22px);
+  line-height: 1.22;
+  text-align: left;
+}
+.layout-dashboard .title:empty { display: none; }
+.layout-dashboard .dashboard-header-final { display: flex; min-width: 0; align-items: flex-end; gap: 8px; }
+.layout-dashboard .title-tail {
+  display: inline-block;
+  flex: 0 1 auto;
+  max-width: calc(100% - var(--dashboard-artist-slot, 0px));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--presentation-title-size, 22px);
+  font-weight: 700;
+  line-height: 1.22;
+}
+.layout-dashboard .artist {
+  display: inline-block;
+  flex: 0 1 var(--dashboard-artist-width, auto);
+  width: var(--dashboard-artist-width, auto);
+  margin-left: auto;
+  min-width: 0;
+  white-space: nowrap;
+  font-size: var(--presentation-artist-size, 14px);
+  line-height: 1.22;
+  text-align: right;
+}
+.layout-dashboard .song-icon {
+  display: none;
+  position: absolute;
+  z-index: 1;
+  top: var(--dashboard-icon-top, 50%);
+  left: var(--dashboard-icon-left, 0px);
+  width: var(--dashboard-icon-display-size, var(--dashboard-icon-size));
+  height: var(--dashboard-icon-display-size, var(--dashboard-icon-size));
+  transform: none;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 14px;
+  background: linear-gradient(145deg, var(--timeline-top), var(--timeline-bottom));
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.22);
+}
+.layout-dashboard.has-song-icon .song-icon { display: block; }
+.song-icon img { display: block; width: 100%; height: 100%; object-fit: cover; }
+/* Animate only the artwork. The square layout box and measured cover centre
+   stay unchanged when switching shape, playing, pausing or resizing. */
+.layout-dashboard.song-icon-circle .song-icon { border-radius: 50%; }
+.layout-dashboard.has-song-icon.song-icon-record .song-icon img {
+  animation: song-icon-spin 20s linear infinite;
+  animation-play-state: paused;
+}
+.layout-dashboard.has-song-icon.song-icon-record.song-icon-playing:not(.song-icon-hidden) .song-icon img {
+  animation-play-state: running;
+}
+.layout-dashboard.song-icon-record .song-icon::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 10%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: #131720;
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 0 0 5px rgba(15, 19, 26, 0.24);
+  pointer-events: none;
+}
+@keyframes song-icon-spin { to { transform: rotate(360deg); } }
+.layout-dashboard .song-badges {
+  position: absolute;
+  left: 0;
+  right: var(--column-inset);
+  bottom: 0;
+  justify-content: center;
+  flex-wrap: nowrap;
+  gap: 6px;
+}
+.layout-dashboard:not(.show-debug-status) .song-badges { bottom: 0; }
+.layout-dashboard .lyrics-shell {
+  grid-column: 2;
+  grid-row: 1 / -1;
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) 7px;
+  gap: 10px;
+  padding: 0;
+  min-height: 0;
+}
+.layout-dashboard .lyrics { height: 100%; }
+/* A short panel needs slightly tighter previous rows after the translated
+   current group moves up. Keep the 8px clearance to the active group. */
+.overlay.is-short.layout-dashboard #beforeLines { gap: 3px; }
+.overlay.is-short.layout-dashboard.auto-context-lines #beforeLines { gap: 5px; }
+.layout-dashboard .line.current { font-size: var(--presentation-lyric-size, 32px); }
+.layout-dashboard .line.context-line { font-size: var(--presentation-context-size, 18px); }
+.layout-dashboard .translation { font-size: var(--presentation-translation-size, 18px); }
+.layout-dashboard .current-block:not(.lyric-shared-second-row) .translation {
+  padding-right: var(--shared-translation-inset, 12px);
+}
+.layout-dashboard .status {
+  grid-column: 1;
+  grid-row: 2;
+  min-width: 0;
+  width: 100%;
+  margin: 0;
+  padding: 4px var(--column-inset) 0 0;
+  text-align: center;
+}
+
+/* Shared horizontal progress/spectrum: canvas retains its existing live audio
+   analysis, sensitivity, fall speed and background-derived colours. */
+.layout-dashboard .timeline,
+.layout-subtitle .timeline { grid-row: 2; width: 100%; min-height: 7px; height: 7px; }
+.layout-dashboard .current-time,
+.layout-subtitle .current-time { bottom: calc(var(--timeline-height, 7px) + 7px); }
+.layout-dashboard.timeline-visualizer-enabled .lyrics-shell,
+.layout-subtitle.timeline-visualizer-enabled .lyrics-shell { grid-template-rows: minmax(0, 1fr) var(--spectrum-height); }
+.layout-dashboard.timeline-visualizer-enabled .timeline,
+.layout-subtitle.timeline-visualizer-enabled .timeline {
+  min-height: var(--spectrum-height);
+  height: var(--spectrum-height);
+  overflow: visible;
+  background: transparent;
+}
+.timeline-visualizer-enabled .timeline-fill,
+.timeline-visualizer-enabled .timeline::before { display: none; }
+.timeline-visualizer { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.timeline-visualizer:not(.is-active) { display: none; }
+.layout-dashboard .timeline::before,
+.layout-subtitle .timeline::before { background: linear-gradient(to right, var(--timeline-top), var(--timeline-bottom)); }
+.layout-dashboard .timeline-fill,
+.layout-subtitle .timeline-fill {
+  left: 0;
+  top: 0;
+  width: calc(var(--progress) * 100%);
+  height: 100%;
+  background: linear-gradient(to right, var(--timeline-top), var(--timeline-bottom));
+  background-size: var(--horizontal-timeline-width, 100%) 100%;
+  box-shadow: none;
+  transition: width 110ms linear;
+}
+/* The timestamp shares the progress footer, not the following-verse area. */
+.layout-dashboard .lyrics-shell,
+.layout-dashboard.timeline-visualizer-enabled .lyrics-shell {
+  grid-template-rows: minmax(0, 1fr) var(--dashboard-footer-height, 34px);
+}
+.layout-dashboard .timeline {
+  width: calc(100% - var(--timestamp-width, 80px) - 12px);
+  align-self: center;
+}
+.layout-dashboard .current-time { bottom: var(--timestamp-bottom, 0px); }
+
+/* 03 / SUBTITLE: only the active original/translation, fully transparent. */
+.overlay.layout-subtitle {
+  --spectrum-height: 24px;
+  padding: var(--panel-padding, 20px);
+  border-color: transparent;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  text-align: center;
+}
+.overlay.layout-subtitle::before, .overlay.layout-subtitle::after { display: none; }
+.overlay.layout-subtitle .song,
+.overlay.layout-subtitle .context,
+.overlay.layout-subtitle .timeline,
+.overlay.layout-subtitle .current-time,
+.overlay.layout-subtitle .status,
+.overlay.layout-subtitle .mv-background { display: none; }
+.layout-subtitle .song { margin: 0; }
+.layout-subtitle .title,
+.layout-subtitle .artist { font-size: var(--presentation-title-size, 13px); font-weight: 600; opacity: 1; color: rgba(255, 255, 255, 0.8); }
+.layout-subtitle .artist { font-size: var(--presentation-artist-size, 13px); }
+.layout-subtitle .artist::before { content: "·"; margin-right: 10px; }
+.layout-subtitle .song-badges { display: none; }
+.overlay.layout-subtitle .lyrics-shell { display: block; padding: 0; }
+.layout-subtitle .lyrics { height: 100%; text-align: center; }
+.layout-subtitle .context { align-items: center; }
+.layout-subtitle .line.context-line { font-size: var(--presentation-context-size, 16px); opacity: 1; }
+.layout-subtitle .line.current { font-size: var(--presentation-lyric-size, 34px); }
+.layout-subtitle .meta-row { display: flex; justify-content: center; }
+.layout-subtitle .translation { font-size: var(--presentation-translation-size, 18px); }
+.layout-subtitle .timeline { width: 88%; justify-self: center; }
+.layout-subtitle .status { margin-top: 8px; text-align: left; }
+
+@media (max-width: 560px) {
+  .overlay { --column-inset: 12px; }
+  .overlay.layout-dashboard { column-gap: 14px; }
+  .offset-badge, .audio-match-badge { padding: 4px 7px; }
+  .layout-lazer .song { column-gap: 8px; }
+  .layout-lazer .song-badges { flex-wrap: wrap; max-width: 125px; }
+  .layout-lazer .lyrics-shell { gap: 12px; }
+  .layout-lazer .lyrics { padding-left: 0; }
+  .layout-lazer .context, .layout-lazer .current-block { left: 0; }
+}
+.offset-badge { font-size: var(--presentation-offset-size, 13px); }
+.audio-match-badge { font-size: var(--presentation-audio-match-badge-size, 13px); flex-shrink: 1; }
+.current-time { font-size: var(--presentation-time-size, 13px); }
+.overlay.is-compact .context { gap: 5px; }
+.overlay.is-compact .meta-row { margin-top: 5px; }
+.overlay.is-compact .song { margin-bottom: 8px; }
+.overlay.is-compact.layout-dashboard .song { margin-bottom: 0; }
+.overlay.is-compact.layout-lazer .song { padding-bottom: 8px; }
+.overlay.is-short .translation { -webkit-line-clamp: 1; }
+.overlay.is-short .meta-row { margin-top: 4px; }
+.overlay.is-short .status { margin-top: 5px; }
+.overlay.is-short.layout-dashboard .status { margin-top: 0; padding-top: 4px; }
+.overlay.is-short.layout-lazer .song { margin-bottom: 6px; padding-bottom: 6px; }
+.overlay.is-short.layout-lazer .song-copy { display: flex; align-items: flex-end; gap: 8px; min-width: 0; }
+.overlay.is-short.layout-lazer .title { flex: 1; }
+.overlay.is-short.layout-lazer .artist { max-width: 30%; }
+.overlay.is-short.layout-lazer .song-badges { grid-row: 1; }
+.overlay.is-compact.layout-lazer .context { gap: 4px; }
+.overlay.is-short.layout-lazer .lyrics { --context-clearance: 5px; }
+.overlay.is-compact.layout-lazer .meta-row { margin-top: 5px; }
+.overlay.is-short.layout-lazer .meta-row { margin-top: 4px; }
+
+/* The introduction indicator occupies one normal current-line row. Its
+   opacity follows playback time; no animation, extra clock or layout loop. */
+.overlay .lyrics.is-before-first .line.current {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: clamp(14px, 0.6em, 22px);
+  min-height: clamp(14px, 0.6em, 22px);
+}
+.lyric-intro-progress { display: flex; justify-content: center; align-items: center; gap: 6px; }
+.lyric-intro-dot {
+  display: block;
+  width: clamp(5px, 0.22em, 9px);
+  height: clamp(5px, 0.22em, 9px);
+  border-radius: 50%;
+  background: var(--lyric-color);
+}
+@media (prefers-reduced-motion: reduce) {
+  .line, .current .lyric-progress-unit, .timeline-fill { transition: none; }
+}

@@ -1,19 +1,21 @@
 {
   "name": "tosu-lyrics-proxy",
-  "version": "0.1.0",
+  "version": "0.2.3",
   "private": true,
   "description": "Minimal loopback proxy for the tosu Live Lyrics overlay.",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
     "start:tosu": "node src/start-tosu.js",
-    "build:proxy": "pkg src/server.js --target node18-win-x64 --output dist/lyrics-proxy.exe",
-    "build:launcher": "pkg src/start-tosu.js --target node18-win-x64 --output dist/Start-Tosu-Lyrics.exe",
-    "build": "pkg src/server.js --target node18-win-x64 --output dist/lyrics-proxy.exe && pkg src/start-tosu.js --target node18-win-x64 --output dist/Start-Tosu-Lyrics.exe && copy /Y bilibili-blacklist.txt dist\\bilibili-blacklist.txt >nul"
+    "build:proxy": "pkg src/server.js --target node18-win-x64 --output dist-runtime-mv-20261004/lyrics-proxy.exe",
+    "build:launcher": "pkg src/start-tosu.js --target node18-win-x64 --output dist-runtime-mv-20261004/Start-Tosu-Lyrics.exe",
+    "build": "npm run build:proxy && npm run build:launcher",
+    "test": "node --test ../diagnostics/stability.test.cjs"
   },
   "dependencies": {
     "crypto-js": "^4.2.0",
     "node-forge": "^1.4.0",
+    "qq-music-api": "1.1.2",
     "soundtouchjs": "^0.3.0"
   },
   "devDependencies": {

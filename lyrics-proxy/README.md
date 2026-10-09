@@ -1,79 +1,36 @@
-# tosu Lyrics Proxy Prototype
+# tosu Lyrics Proxy
 
-This is a loopback-only replacement for the subset of `api-enhanced` used by
-Live Lyrics. It binds to `127.0.0.1:3002` by default and exposes only:
+Live Lyrics 专用的本地代理，默认只监听 `127.0.0.1:3002`。入口为 `src/server.js`；启动器入口为 `src/start-tosu.js`。
 
-- `GET` or `POST /audio/match`
-- `GET` or `POST /lyric/new`
-- `GET` or `POST /lyric`
-- `GET` or `POST /search`
-- `GET` or `POST /cloudsearch`
-- `GET` or `POST /mv/for-song`
-- `GET` or `POST /bilibili/background`
-- `GET` or `HEAD` /bilibili/media (loopback-only Bilibili video stream with the required Referer header)
-- `POST /song-cache`
-- `GET /health`
-
-## Development Test
-
-Install dependencies once:
+## 开发
 
 ```powershell
-npm install
+pnpm install --frozen-lockfile
+pnpm start
 ```
 
-Start the proxy:
+建议 Node.js 20+、pnpm 9 兼容锁文件。参数 `--port` 与 `--cache` 可设置监听端口和歌曲映射文件位置；不要提交使用过程中生成的映射或账号数据。
+
+## 接口
+
+- `/audio/match`：网易云指纹识曲。
+- `/search`、`/cloudsearch`、`/lyric`、`/lyric/new`：网易云搜索与歌词。
+- `/qq/search`、`/qq/lyric`：QQ 搜索与歌词。
+- `/song/audio`、`/qq/song/audio`：参考音频流。
+- `/mv/for-song`、`/qq/mv/for-song`：MV 查询与播放地址。
+- `/song-cache`：显式歌曲映射写入。
+- `/health`：版本、提供商与功能检查。
+
+请求取消、超时及并发由 src/upstream.js 管理。QQMusicApi 路由通过 src/qqmusic.js 调用，其缓存未启用。
+
+## EXE 与运行包
 
 ```powershell
-npm start
+pnpm build
 ```
 
-Set the Live Lyrics settings to:
+当前 package.json 输出 `dist-runtime-mv-20261004/lyrics-proxy.exe` 和 `Start-Tosu-Lyrics.exe`，使用 pkg 内嵌 Node 18 运行时。全新克隆可直接构建；已有历史输出时为 pkg 选择新目录，不覆盖旧 EXE。两个 EXE 发布时位于前端入口旁边，启动器查找相邻代理并等待健康检查。
 
-```text
-NetEase API Base: http://127.0.0.1:3002
-Song Cache Writer: http://127.0.0.1:3002/song-cache
-```
+从根目录用 `tools/package-release.cjs` 与运行清单打包，不能把 src、node_modules、依赖锁文件或开发记录放入运行包。GitHub 源码则需要 src、package.json、pnpm-lock.yaml、README 与上游许可声明。
 
-The old full `api-enhanced` process is not needed while this proxy is running.
-
-## Bilibili Blacklist
-
-`bilibili-blacklist.txt` sits beside `lyrics-proxy.exe`. It supports
-`[blacklist]` and `[whitelist]` sections. Blacklist terms exclude matching
-titles, descriptions, and authors. Whitelist terms score matching candidate
-titles higher while candidates without a match lose score. The proxy evaluates
-the first five search results that pass duration checks, then uses the highest
-score. Lines beginning with `#` are comments, and the file is re-read when it
-changes, so the proxy does not need to be restarted.
-
-## Packaging
-
-`pkg` embeds Node.js, the proxy code, and its JavaScript dependencies into a
-single executable. Build both programs with:
-
-```powershell
-npm run build
-```
-
-Outputs:
-
-- `dist/lyrics-proxy.exe`: the loopback proxy.
-- `dist/Start-Tosu-Lyrics.exe`: starts the proxy, waits for `/health`, finds
-  `tosu.exe` relative to the plugin folder, and stops the proxy when tosu exits.
-
-For release, place both EXEs beside the plugin's `index.html` and
-`song-cache.json`. The packaged launcher then finds its sibling
-`lyrics-proxy.exe` and writes the cache beside itself.
-
-With the standard `tosu/static/plugin-folder` layout no configuration is
-needed. At runtime, `TOSU_PATH` can override the automatic relative lookup:
-
-```powershell
-$env:TOSU_PATH = 'D:\Apps\tosu\tosu.exe'
-.\dist\Start-Tosu-Lyrics.exe
-```
-
-`pkg` does not compile JavaScript into native machine code. It bundles a Node
-runtime and application files into one EXE, which removes the requirement for a
-separate Node installation while retaining normal Node behavior.
+完整上传清单见 [SOURCE_LAYOUT.md](../SOURCE_LAYOUT.md)，来源声明见 [UPSTREAM-NOTICE.md](UPSTREAM-NOTICE.md) 和 [THIRD_PARTY.md](../THIRD_PARTY.md)。

@@ -2,11 +2,11 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const { eapi, weapi } = require("./vendor/netease-crypto");
+const { upstreamJson } = require("./upstream");
 
 const API_DOMAIN = "https://interface.music.163.com";
 const AUDIO_MATCH_URL = "https://interface.music.163.com/api/music/audio/match";
 const USER_AGENT = "NeteaseMusic 9.0.90/5038 (iPhone; iOS 16.2; zh_CN)";
-const REQUEST_TIMEOUT_MS = 15000;
 
 let wnmcid = `${Math.random().toString(36).slice(2, 8)}.${Date.now()}.01.0`;
 
@@ -46,19 +46,7 @@ function cookieHeader(header) {
 }
 
 async function fetchJson(url, options = {}) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-
-  try {
-    const response = await fetch(url, { ...options, signal: controller.signal });
-    const body = await response.json();
-    if (!response.ok) {
-      throw new Error(`${new URL(url).pathname} returned HTTP ${response.status}`);
-    }
-    return body;
-  } finally {
-    clearTimeout(timer);
-  }
+  return upstreamJson(url, options);
 }
 
 async function requestEapi(uri, data) {
@@ -169,4 +157,27 @@ async function mvForSong({ id, r = 720 }) {
   };
 }
 
-module.exports = { audioMatch, lyric, lyricNew, search, mvForSong };
+async function songAudioUrl({ id, level = "standard" }) {
+  const numericId = Number(id);
+  if (!Number.isFinite(numericId) || numericId <= 0) throw new Error("song id is required");
+
+  const response = await requestWeapi("/api/song/enhance/player/url/v1", {
+    ids: JSON.stringify([numericId]),
+    level: String(level || "standard"),
+    encodeType: "mp3",
+  });
+  const item = response?.data?.[0] || {};
+  return {
+    code: Number(response?.code || 200),
+    id: numericId,
+    url: item.url || "",
+    type: item.type || "",
+    level: item.level || level,
+    durationMs: Number(item.time || 0),
+    // Trial streams have their own origin and cannot be treated as a full
+    // recording at t=0 by the reference aligner.
+    trial: Boolean(item.freeTrialInfo),
+  };
+}
+
+module.exports = { audioMatch, lyric, lyricNew, search, mvForSong, songAudioUrl };
